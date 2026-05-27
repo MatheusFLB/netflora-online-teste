@@ -1,12 +1,6 @@
-# System-level packages for Streamlit Cloud (Ubuntu)
-# Required by rasterio, geopandas, shapely, and OpenCV
-
-# GDAL / geospatial stack
 libgdal-dev
 libgeos-dev
 libproj-dev
 gdal-bin
-
-# OpenCV runtime libs (needed even for headless build)
 libgl1-mesa-glx
 libglib2.0-0
