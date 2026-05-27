@@ -398,12 +398,54 @@ def build_ortho_preview(ortho_path: Path, max_side: int = 1800):
     return arr, bounds
 
 
+_RESPONSIVE_INJECT = """\
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+html, body { margin: 0 !important; padding: 0 !important; height: 100% !important; overflow: hidden; }
+</style>
+<script>
+(function () {
+    function resize() {
+        var vw = window.innerWidth;
+        var h = vw < 480  ? Math.round(vw * 1.6) :
+                vw < 768  ? Math.round(vw * 1.4) :
+                vw < 1024 ? 620 : 800;
+        h = Math.max(h, 420);
+        window.parent.postMessage(
+            { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h },
+            "*"
+        );
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", resize);
+    } else {
+        resize();
+    }
+    window.addEventListener("resize", resize);
+})();
+</script>
+"""
+
+
+def _render_map(m: "folium.Map") -> str:
+    """Return a full, self-contained HTML document for a folium map.
+
+    Uses get_root().render() so there is no nested iframe — the Leaflet map
+    fills the single Streamlit component iframe directly.  Responsive JS is
+    injected to tell Streamlit how tall to make that iframe based on viewport.
+    """
+    html = m.get_root().render()
+    # Inject viewport + responsive CSS/JS right after <head>
+    html = html.replace("<head>", "<head>\n" + _RESPONSIVE_INJECT, 1)
+    return html
+
+
 def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None) -> str:
     """Build a folium map with detection polygons and optional ortho overlay."""
     if polygons_df.empty:
         # Return a default map centered on Brazil
         m = folium.Map(location=[-15.0, -55.0], zoom_start=4)
-        return m._repr_html_()
+        return _render_map(m)
 
     all_lats, all_lons = [], []
     for _, row in polygons_df.iterrows():
@@ -455,7 +497,7 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     fg.add_to(m)
     folium.LayerControl(collapsed=False).add_to(m)
 
-    return m._repr_html_()
+    return _render_map(m)
 
 
 # ==================== EXPORTAÇÃO ====================
