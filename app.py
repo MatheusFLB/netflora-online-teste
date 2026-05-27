@@ -149,11 +149,19 @@ col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown('<div class="step-box">📷 <strong>1. Ortofoto</strong><br>Imagem aérea georreferenciada (.tif) capturada por drone.</div>', unsafe_allow_html=True)
 with col2:
-    st.markdown('<div class="step-box">✂️ <strong>2. Tiles</strong><br>A imagem é dividida em pequenos recortes para facilitar a análise pelo modelo.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="step-box">✂️ <strong>2. Tiles</strong><br>A imagem é dividida em recortes para facilitar a análise pelo modelo.</div>', unsafe_allow_html=True)
 with col3:
     st.markdown('<div class="step-box">🤖 <strong>3. Detecção</strong><br>Um modelo de deep learning identifica as espécies em cada recorte.</div>', unsafe_allow_html=True)
 with col4:
     st.markdown('<div class="step-box">🗺️ <strong>4. Resultado</strong><br>As detecções são georreferenciadas e exibidas em um mapa interativo.</div>', unsafe_allow_html=True)
+
+st.markdown(
+    """
+    Para viabilizar esta solução, a Embrapa estruturou o projeto com base em Python e no modelo de detecção de objetos YOLO (You Only Look Once), amplamente utilizado em visão computacional para identificação automática de elementos em imagens. A proposta original foi desenvolvida para execução em ambiente de nuvem, por meio do Google Colab/Notebook, permitindo o processamento de ortofotos aéreas com apoio de inteligência artificial sem exigir infraestrutura local robusta.\n
+    A partir dessa base, o código foi adaptado para execução local, ampliando a flexibilidade de uso e possibilitando maior controle sobre os dados. Além disso, foi implementada essa página de acesso público, onde qualquer pessoa pode enviar uma ortofoto e receber o resultado da análise de forma prática e acessível.\n
+    Após o processamento, a página disponibiliza os arquivos gerados para exportação, incluindo especialmente o Shapefile, formato amplamente utilizado em sistemas de informação geográfica (GIS). Isso permite que os resultados sejam integrados a ferramentas de análise topográfica, mapeamento e planejamento territorial, facilitando o aproveitamento técnico das informações obtidas.\n
+    """
+)
 
 st.divider()
 
@@ -212,7 +220,7 @@ with col_alg:
     algorithm = st.selectbox(
         "🌱 Algoritmo de detecção:",
         options=algorithms,
-        index=0,
+        index=algorithms.index("Palmeiras") if "Palmeiras" in algorithms else 0,
         help="Escolha o conjunto de espécies que o modelo deve detectar.",
     )
 
@@ -440,7 +448,7 @@ if st.session_state.last_run is not None:
             {run_data['map_html']}
         </div>
         """
-        components.v1.html(responsive_map, height=520, scrolling=False)
+        components.v1.html(responsive_map, height=800, scrolling=False)
     else:
         st.info("Mapa não disponível para este resultado.")
 
@@ -525,11 +533,12 @@ if st.session_state.last_run is not None:
 st.divider()
 st.markdown(
     """
-    <div style="text-align: center; font-size: 14px; line-height: 2; color: #555;">
-        <strong>🌿 Netflora</strong> — Projeto de detecção automatizada de espécies vegetais<br>
-        Desenvolvido pela <a href="https://www.embrapa.br/" target="_blank">Embrapa</a> &nbsp;|&nbsp;
-        💻 <a href="https://github.com/NetFlora/Netflora" target="_blank">Repositório GitHub</a> &nbsp;|&nbsp;
-        📄 <a href="https://github.com/NetFlora/Netflora/blob/main/LICENSE.md" target="_blank">Licença</a>
+    <div style="text-align: center; font-size: 14px; line-height: 2;">
+        <strong>👤 Autor do Site:</strong> Matheus Bissoli<br>
+        🌐 <a href="https://matheusflb.github.io/" target="_blank">Site pessoal</a> &nbsp;|&nbsp;
+        💼 <a href="https://www.linkedin.com/in/matheusbissoli/" target="_blank">LinkedIn</a> &nbsp;|&nbsp;
+        💻 <a href="https://github.com/MatheusFLB/" target="_blank">GitHub</a> &nbsp;|&nbsp;
+        🧑‍💻 <a href="https://github.com/MatheusFLB/netflora-online/" target="_blank">Código-fonte</a>
     </div>
     """,
     unsafe_allow_html=True,
