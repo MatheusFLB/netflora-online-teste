@@ -1,0 +1,11 @@
+[server]
+# Required for Streamlit Cloud deployment
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+# Allow uploading GeoTIFF files up to 400 MB
+maxUploadSize = 400
+
+[browser]
+gatherUsageStats = false
+
