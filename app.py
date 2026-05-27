@@ -438,8 +438,24 @@ if st.session_state.last_run is not None:
 
     if run_data.get("map_html"):
         responsive_map = f"""
+        <script>
+        (function() {{
+            function updateHeight() {{
+                var vw = window.innerWidth;
+                var targetHeight = vw < 768 ? Math.max(Math.round(vw * 1.4), 480) : 800;
+                window.parent.postMessage({{
+                    isStreamlitMessage: true,
+                    type: "streamlit:setFrameHeight",
+                    height: targetHeight
+                }}, "*");
+            }}
+            updateHeight();
+            window.addEventListener("resize", updateHeight);
+        }})();
+        </script>
         <div style="
             width: 100%;
+            height: 100%;
             border-radius: 10px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.15);
             overflow: hidden;
