@@ -27,6 +27,219 @@ DEFAULT_WEIGHTS_URL = "https://github.com/NetFlora/Netflora/releases/download/As
 # groups.json local (committed to git) — always available without downloading netflora_src
 GROUPS_JSON = APP_ROOT / "json" / "groups.json"
 
+# ==================== TRANSLATIONS ====================
+
+TRANSLATIONS: dict = {
+    "en": {
+        "title": "🌿 Netflora – Plant Species Detection with AI",
+        "intro": (
+            "**Project developed by Embrapa** for automated forest inventory using drones and artificial intelligence. "
+            "The tool analyzes aerial orthophotos and automatically identifies the location of plant species of interest, "
+            "such as Açaí, Brazil Nut, Palms, and other Amazon rainforest species."
+        ),
+        "how_it_works": "## 📖 How does it work?",
+        "step1": "📷 <strong>1. Orthophoto</strong><br>Georeferenced aerial image (.tif) captured by drone.",
+        "step2": "✂️ <strong>2. Tiles</strong><br>The image is split into crops to facilitate model analysis.",
+        "step3": "🤖 <strong>3. Detection</strong><br>A deep learning model identifies species in each crop.",
+        "step4": "🗺️ <strong>4. Result</strong><br>Detections are georeferenced and displayed on an interactive map.",
+        "how_desc": (
+            "To enable this solution, Embrapa structured the project using Python and the YOLO (You Only Look Once) "
+            "object detection model, widely used in computer vision for automatic element identification in images. "
+            "The original proposal was developed for cloud execution via Google Colab/Notebook, allowing orthophoto "
+            "processing with AI support without requiring robust local infrastructure.\n\n"
+            "From this base, the code was adapted for local execution, expanding flexibility and enabling greater "
+            "data control. Additionally, this public-access page was implemented, where anyone can upload an "
+            "orthophoto and receive the analysis results in a practical and accessible way.\n\n"
+            "After processing, the page provides the generated files for export, especially the Shapefile format "
+            "widely used in geographic information systems (GIS). This allows results to be integrated into "
+            "topographic analysis, mapping and territorial planning tools, facilitating the technical use of the "
+            "information obtained."
+        ),
+        "ortho_section": "## 📁 Input Orthophoto",
+        "ortho_radio": "Select the orthophoto source:",
+        "ortho_opt_example": "Use example orthophoto",
+        "ortho_opt_upload": "Upload my orthophoto (.tif)",
+        "ortho_radio_help": "Choose between the example orthophoto included in the project or upload your own GeoTIFF file.",
+        "ortho_using": "✅ Using: `ortofoto_exemplo1_corte.tif`",
+        "ortho_not_found": "Example orthophoto not found at `ortofoto/ortofoto_exemplo1_corte.tif`.",
+        "ortho_upload_label": "Upload your GeoTIFF orthophoto:",
+        "ortho_upload_help": "The file must be a GeoTIFF with a defined geographic reference system (CRS).",
+        "ortho_received": "✅ File received: `{name}`",
+        "ortho_waiting": "Waiting for orthophoto upload.",
+        "config_section": "## ⚙️ Detection Settings",
+        "algo_label": "🌱 Detection algorithm:",
+        "algo_help": "Choose the set of species the model should detect.",
+        "conf_label": "🎯 Minimum confidence:",
+        "conf_help": "Detections below this confidence will be ignored. Higher values = fewer but more precise detections.",
+        "advanced_expander": "🔧 Advanced Settings",
+        "tile_size_label": "Tile size (px):",
+        "tile_size_help": "Resolution of crops sent to the model.",
+        "overlap_label": "Overlap (px):",
+        "overlap_help": "Overlap between adjacent tiles to avoid missing detections at edges.",
+        "max_tiles_label": "Maximum tiles:",
+        "max_tiles_help": "Tile limit for demonstration. Increase to process larger images.",
+        "device_label": "Device:",
+        "device_help": "'cpu' for processor; '0' for NVIDIA GPU (requires CUDA).",
+        "netflora_url_label": "Netflora repository URL (zip):",
+        "weights_url_label": "Model weights URL (.pt):",
+        "first_run_info": (
+            "ℹ️ **First run:** the detection model (~135 MB) and Netflora code "
+            "will be downloaded automatically when you click *Run Detection*. "
+            "This may take a few minutes depending on your connection."
+        ),
+        "run_button": "🔍 Run Detection",
+        "run_warning": "⚠️ Upload an orthophoto before running.",
+        "pipeline_status": "🔄 Running detection pipeline...",
+        "step_prep_netflora": "**1/6** Preparing Netflora code...",
+        "step_prep_netflora_err": "❌ Failed to prepare Netflora.",
+        "step_check_weights": "**2/6** Checking model weights...",
+        "step_check_weights_err": "❌ Failed to prepare model weights.",
+        "step_gen_tiles": "**3/6** Generating orthophoto tiles...",
+        "step_gen_tiles_err": "❌ Failed to generate tiles.",
+        "step_gen_tiles_done": "**3/6** {count} tiles generated.",
+        "step_no_tiles_err": "❌ No valid tiles were generated.",
+        "step_no_tiles_msg": "No valid tiles were generated. Check that the orthophoto is valid.",
+        "step_run_detect": "**4/6** Running detection model...",
+        "step_detect_err": "❌ Detection failed.",
+        "step_detect_err_msg": "The detect.py execution failed.",
+        "step_error_log": "View error log",
+        "step_process_results": "**5/6** Processing results...",
+        "step_gen_map": "**6/6** Generating interactive map...",
+        "pipeline_done": "✅ Pipeline completed successfully!",
+        "results_section": "## 📊 Detection Results",
+        "metric_tiles": "🔲 Tiles processed",
+        "metric_plants": "🌱 Plants detected",
+        "metric_species": "🏷️ Species identified",
+        "map_section": "### 🗺️ Interactive Map",
+        "map_caption": (
+            "The map displays georeferenced detections. "
+            "Hover over markers to see the species and detection confidence. "
+            "Use the controls in the upper right corner to toggle map layers."
+        ),
+        "map_unavailable": "Map not available for this result.",
+        "table_section": "### 📋 Detection Table",
+        "table_empty": "No detections found with current parameters. Try reducing the minimum confidence.",
+        "col_tile": "Tile",
+        "col_species": "Species",
+        "col_confidence": "Confidence",
+        "export_section": "### 💾 Export Results",
+        "export_caption": "The ZIP file contains: interactive map (.html), detection spreadsheet (.csv) and georeferenced shapefile (.shp and auxiliary files).",
+        "export_button": "📦 Download results ZIP",
+        "clear_button": "🗑️ Clear results",
+        "export_error": "Error generating export: {error}",
+        "tile_expander": "🔬 View detections by tile",
+        "tile_select": "Choose a tile to inspect:",
+        "tile_no_tiles": "No tiles available.",
+        "tile_orig_caption": "**Original**",
+        "tile_det_caption": "**With detections**",
+        "tile_no_det": "No detections in this tile",
+        "lang_selector_label": "🌐 Language / Idioma",
+    },
+    "pt": {
+        "title": "🌿 Netflora – Detecção de Espécies Vegetais com IA",
+        "intro": (
+            "**Projeto desenvolvido pela Embrapa** para o inventário florestal automatizado com uso de drones e inteligência artificial. "
+            "A ferramenta analisa ortofotos aéreas e identifica automaticamente a localização de espécies vegetais de interesse, "
+            "como Açaí, Castanheira, Palmeiras e outras espécies da floresta amazônica."
+        ),
+        "how_it_works": "## 📖 Como funciona?",
+        "step1": "📷 <strong>1. Ortofoto</strong><br>Imagem aérea georreferenciada (.tif) capturada por drone.",
+        "step2": "✂️ <strong>2. Tiles</strong><br>A imagem é dividida em recortes para facilitar a análise pelo modelo.",
+        "step3": "🤖 <strong>3. Detecção</strong><br>Um modelo de deep learning identifica as espécies em cada recorte.",
+        "step4": "🗺️ <strong>4. Resultado</strong><br>As detecções são georreferenciadas e exibidas em um mapa interativo.",
+        "how_desc": (
+            "Para viabilizar esta solução, a Embrapa estruturou o projeto com base em Python e no modelo de detecção de objetos YOLO (You Only Look Once), "
+            "amplamente utilizado em visão computacional para identificação automática de elementos em imagens. "
+            "A proposta original foi desenvolvida para execução em ambiente de nuvem, por meio do Google Colab/Notebook, "
+            "permitindo o processamento de ortofotos aéreas com apoio de inteligência artificial sem exigir infraestrutura local robusta.\n\n"
+            "A partir dessa base, o código foi adaptado para execução local, ampliando a flexibilidade de uso e possibilitando maior controle sobre os dados. "
+            "Além disso, foi implementada essa página de acesso público, onde qualquer pessoa pode enviar uma ortofoto e receber o resultado da análise de forma prática e acessível.\n\n"
+            "Após o processamento, a página disponibiliza os arquivos gerados para exportação, incluindo especialmente o Shapefile, "
+            "formato amplamente utilizado em sistemas de informação geográfica (GIS). Isso permite que os resultados sejam integrados a "
+            "ferramentas de análise topográfica, mapeamento e planejamento territorial, facilitando o aproveitamento técnico das informações obtidas."
+        ),
+        "ortho_section": "## 📁 Ortofoto de entrada",
+        "ortho_radio": "Selecione a fonte da ortofoto:",
+        "ortho_opt_example": "Usar ortofoto de exemplo",
+        "ortho_opt_upload": "Enviar minha ortofoto (.tif)",
+        "ortho_radio_help": "Escolha entre usar a ortofoto de exemplo incluída no projeto ou enviar o seu próprio arquivo GeoTIFF.",
+        "ortho_using": "✅ Usando: `ortofoto_exemplo1_corte.tif`",
+        "ortho_not_found": "Ortofoto de exemplo não encontrada em `ortofoto/ortofoto_exemplo1_corte.tif`.",
+        "ortho_upload_label": "Envie sua ortofoto GeoTIFF:",
+        "ortho_upload_help": "O arquivo deve ser um GeoTIFF com sistema de referência geográfico definido (CRS).",
+        "ortho_received": "✅ Arquivo recebido: `{name}`",
+        "ortho_waiting": "Aguardando upload da ortofoto.",
+        "config_section": "## ⚙️ Configurações de detecção",
+        "algo_label": "🌱 Algoritmo de detecção:",
+        "algo_help": "Escolha o conjunto de espécies que o modelo deve detectar.",
+        "conf_label": "🎯 Confiança mínima:",
+        "conf_help": "Detecções com confiança abaixo desse valor serão ignoradas. Valores mais altos = menos detecções, mas mais precisas.",
+        "advanced_expander": "🔧 Configurações avançadas",
+        "tile_size_label": "Tamanho do tile (px):",
+        "tile_size_help": "Resolução dos recortes enviados ao modelo.",
+        "overlap_label": "Sobreposição (px):",
+        "overlap_help": "Sobreposição entre tiles adjacentes para evitar perda de detecções nas bordas.",
+        "max_tiles_label": "Máximo de tiles:",
+        "max_tiles_help": "Limite de tiles para demonstração. Aumente para processar imagens maiores.",
+        "device_label": "Dispositivo:",
+        "device_help": "'cpu' para processador; '0' para GPU NVIDIA (requer CUDA).",
+        "netflora_url_label": "URL do repositório Netflora (zip):",
+        "weights_url_label": "URL dos pesos do modelo (.pt):",
+        "first_run_info": (
+            "ℹ️ **Primeira execução:** o modelo de detecção (~135 MB) e o código do Netflora "
+            "serão baixados automaticamente ao clicar em *Executar Detecção*. "
+            "Isso pode levar alguns minutos dependendo da conexão."
+        ),
+        "run_button": "🔍 Executar Detecção",
+        "run_warning": "⚠️ Envie uma ortofoto antes de executar.",
+        "pipeline_status": "🔄 Executando pipeline de detecção...",
+        "step_prep_netflora": "**1/6** Preparando código do Netflora...",
+        "step_prep_netflora_err": "❌ Falha ao preparar Netflora.",
+        "step_check_weights": "**2/6** Verificando pesos do modelo...",
+        "step_check_weights_err": "❌ Falha ao preparar pesos do modelo.",
+        "step_gen_tiles": "**3/6** Gerando tiles da ortofoto...",
+        "step_gen_tiles_err": "❌ Falha ao gerar tiles.",
+        "step_gen_tiles_done": "**3/6** {count} tiles gerados.",
+        "step_no_tiles_err": "❌ Nenhum tile válido foi gerado.",
+        "step_no_tiles_msg": "Nenhum tile válido foi gerado. Verifique se a ortofoto é válida.",
+        "step_run_detect": "**4/6** Executando modelo de detecção...",
+        "step_detect_err": "❌ Falha na detecção.",
+        "step_detect_err_msg": "A execução do detect.py falhou.",
+        "step_error_log": "Ver log de erro",
+        "step_process_results": "**5/6** Processando resultados...",
+        "step_gen_map": "**6/6** Gerando mapa interativo...",
+        "pipeline_done": "✅ Pipeline concluído com sucesso!",
+        "results_section": "## 📊 Resultados da detecção",
+        "metric_tiles": "🔲 Tiles processados",
+        "metric_plants": "🌱 Plantas detectadas",
+        "metric_species": "🏷️ Espécies identificadas",
+        "map_section": "### 🗺️ Mapa interativo",
+        "map_caption": (
+            "O mapa exibe as detecções georreferenciadas. "
+            "Passe o mouse sobre os marcadores para ver a espécie e a confiança da detecção. "
+            "Use os controles no canto superior direito para alternar as camadas do mapa."
+        ),
+        "map_unavailable": "Mapa não disponível para este resultado.",
+        "table_section": "### 📋 Tabela de detecções",
+        "table_empty": "Nenhuma detecção encontrada com os parâmetros atuais. Tente reduzir a confiança mínima.",
+        "col_tile": "Tile",
+        "col_species": "Espécie",
+        "col_confidence": "Confiança",
+        "export_section": "### 💾 Exportar resultados",
+        "export_caption": "O arquivo ZIP contém: mapa interativo (.html), planilha de detecções (.csv) e shapefile georreferenciado (.shp e arquivos auxiliares).",
+        "export_button": "📦 Baixar ZIP de resultados",
+        "clear_button": "🗑️ Limpar resultados",
+        "export_error": "Erro ao gerar exportação: {error}",
+        "tile_expander": "🔬 Visualizar detecções por tile",
+        "tile_select": "Escolha um tile para inspecionar:",
+        "tile_no_tiles": "Nenhum tile disponível.",
+        "tile_orig_caption": "**Original**",
+        "tile_det_caption": "**Com detecções**",
+        "tile_no_det": "Sem detecções neste tile",
+        "lang_selector_label": "🌐 Language / Idioma",
+    },
+}
+
 # ==================== CONFIGURAÇÃO DA PÁGINA ====================
 
 st.set_page_config(
@@ -127,69 +340,76 @@ def cached_algorithms(groups_json_str: str) -> list:
 
 if "last_run" not in st.session_state:
     st.session_state.last_run = None
+if "lang" not in st.session_state:
+    st.session_state.lang = "en"
+
+# ==================== LANGUAGE SELECTOR ====================
+
+_lang_col, _ = st.columns([1, 5])
+with _lang_col:
+    _lang_choice = st.selectbox(
+        TRANSLATIONS["en"]["lang_selector_label"],
+        options=["English", "Português"],
+        index=0 if st.session_state.lang == "en" else 1,
+        label_visibility="collapsed",
+    )
+    _lang_new = "en" if _lang_choice == "English" else "pt"
+    if _lang_new != st.session_state.lang:
+        st.session_state.lang = _lang_new
+        st.rerun()
+
+t = TRANSLATIONS[st.session_state.lang]
 
 # ==================== TÍTULO ====================
 
-st.markdown("# 🌿 Netflora – Detecção de Espécies Vegetais com IA")
-st.markdown(
-    """
-    **Projeto desenvolvido pela Embrapa** para o inventário florestal automatizado com uso de drones e inteligência artificial.
-    A ferramenta analisa ortofotos aéreas e identifica automaticamente a localização de espécies vegetais de interesse,
-    como Açaí, Castanheira, Palmeiras e outras espécies da floresta amazônica.
-    """
-)
+st.markdown(f"# {t['title']}")
+st.markdown(t["intro"])
 
 st.divider()
 
-# ==================== COMO FUNCIONA ====================
+# ==================== HOW IT WORKS ====================
 
-st.markdown("## 📖 Como funciona?")
+st.markdown(t["how_it_works"])
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.markdown('<div class="step-box">📷 <strong>1. Ortofoto</strong><br>Imagem aérea georreferenciada (.tif) capturada por drone.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="step-box">{t["step1"]}</div>', unsafe_allow_html=True)
 with col2:
-    st.markdown('<div class="step-box">✂️ <strong>2. Tiles</strong><br>A imagem é dividida em recortes para facilitar a análise pelo modelo.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="step-box">{t["step2"]}</div>', unsafe_allow_html=True)
 with col3:
-    st.markdown('<div class="step-box">🤖 <strong>3. Detecção</strong><br>Um modelo de deep learning identifica as espécies em cada recorte.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="step-box">{t["step3"]}</div>', unsafe_allow_html=True)
 with col4:
-    st.markdown('<div class="step-box">🗺️ <strong>4. Resultado</strong><br>As detecções são georreferenciadas e exibidas em um mapa interativo.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="step-box">{t["step4"]}</div>', unsafe_allow_html=True)
 
-st.markdown(
-    """
-    Para viabilizar esta solução, a Embrapa estruturou o projeto com base em Python e no modelo de detecção de objetos YOLO (You Only Look Once), amplamente utilizado em visão computacional para identificação automática de elementos em imagens. A proposta original foi desenvolvida para execução em ambiente de nuvem, por meio do Google Colab/Notebook, permitindo o processamento de ortofotos aéreas com apoio de inteligência artificial sem exigir infraestrutura local robusta.\n
-    A partir dessa base, o código foi adaptado para execução local, ampliando a flexibilidade de uso e possibilitando maior controle sobre os dados. Além disso, foi implementada essa página de acesso público, onde qualquer pessoa pode enviar uma ortofoto e receber o resultado da análise de forma prática e acessível.\n
-    Após o processamento, a página disponibiliza os arquivos gerados para exportação, incluindo especialmente o Shapefile, formato amplamente utilizado em sistemas de informação geográfica (GIS). Isso permite que os resultados sejam integrados a ferramentas de análise topográfica, mapeamento e planejamento territorial, facilitando o aproveitamento técnico das informações obtidas.\n
-    """
-)
+st.markdown(t["how_desc"])
 
 st.divider()
 
-# ==================== ENTRADA DA ORTOFOTO ====================
+# ==================== INPUT ORTHOPHOTO ====================
 
-st.markdown("## 📁 Ortofoto de entrada")
+st.markdown(t["ortho_section"])
 
 ortho_option = st.radio(
-    "Selecione a fonte da ortofoto:",
-    options=["Usar ortofoto de exemplo", "Enviar minha ortofoto (.tif)"],
+    t["ortho_radio"],
+    options=[t["ortho_opt_example"], t["ortho_opt_upload"]],
     horizontal=True,
-    help="Escolha entre usar a ortofoto de exemplo incluída no projeto ou enviar o seu próprio arquivo GeoTIFF.",
+    help=t["ortho_radio_help"],
 )
 
 ortho_path = None
 uploaded_ortho_path = None
 
-if ortho_option == "Usar ortofoto de exemplo":
+if ortho_option == t["ortho_opt_example"]:
     if DEFAULT_ORTHO.exists():
-        st.success(f"✅ Usando: `ortofoto_exemplo1_corte.tif`")
+        st.success(t["ortho_using"])
         ortho_path = DEFAULT_ORTHO
     else:
-        st.error("Ortofoto de exemplo não encontrada em `ortofoto/ortofoto_exemplo1_corte.tif`.")
+        st.error(t["ortho_not_found"])
 else:
     uploaded = st.file_uploader(
-        "Envie sua ortofoto GeoTIFF:",
+        t["ortho_upload_label"],
         type=["tif", "tiff"],
-        help="O arquivo deve ser um GeoTIFF com sistema de referência geográfico definido (CRS).",
+        help=t["ortho_upload_help"],
     )
     if uploaded is not None:
         WORKDIR.mkdir(parents=True, exist_ok=True)
@@ -197,18 +417,18 @@ else:
         uploaded_ortho_path.parent.mkdir(parents=True, exist_ok=True)
         with uploaded_ortho_path.open("wb") as f:
             f.write(uploaded.getbuffer())
-        st.success(f"✅ Arquivo recebido: `{uploaded.name}`")
+        st.success(t["ortho_received"].format(name=uploaded.name))
         ortho_path = uploaded_ortho_path
     else:
-        st.info("Aguardando upload da ortofoto.")
+        st.info(t["ortho_waiting"])
 
 st.divider()
 
-# ==================== CONFIGURAÇÕES DE DETECÇÃO ====================
+# ==================== DETECTION SETTINGS ====================
 
-st.markdown("## ⚙️ Configurações de detecção")
+st.markdown(t["config_section"])
 
-# Carregar algoritmos disponíveis — usa cópia local do groups.json (sempre disponível)
+# Load available algorithms — uses local groups.json copy (always available)
 try:
     algorithms = cached_algorithms(str(GROUPS_JSON))
 except Exception:
@@ -218,122 +438,116 @@ col_alg, col_conf = st.columns(2)
 
 with col_alg:
     algorithm = st.selectbox(
-        "🌱 Algoritmo de detecção:",
+        t["algo_label"],
         options=algorithms,
         index=algorithms.index("Palmeiras") if "Palmeiras" in algorithms else 0,
-        help="Escolha o conjunto de espécies que o modelo deve detectar.",
+        help=t["algo_help"],
     )
 
 with col_conf:
     conf_thres = st.slider(
-        "🎯 Confiança mínima:",
+        t["conf_label"],
         min_value=0.05,
         max_value=0.95,
         value=0.25,
         step=0.05,
         format="%.2f",
-        help="Detecções com confiança abaixo desse valor serão ignoradas. Valores mais altos = menos detecções, mas mais precisas.",
+        help=t["conf_help"],
     )
 
-# Configurações avançadas
-with st.expander("🔧 Configurações avançadas"):
+with st.expander(t["advanced_expander"]):
     col_a, col_b, col_c, col_d = st.columns(4)
     with col_a:
         tile_size = st.select_slider(
-            "Tamanho do tile (px):",
+            t["tile_size_label"],
             options=[640, 768, 1024, 1280, 1536, 2048],
             value=1536,
-            help="Resolução dos recortes enviados ao modelo.",
+            help=t["tile_size_help"],
         )
     with col_b:
         overlap = st.slider(
-            "Sobreposição (px):",
+            t["overlap_label"],
             min_value=0,
             max_value=min(512, tile_size - 1),
             value=min(256, tile_size - 1),
             step=32,
-            help="Sobreposição entre tiles adjacentes para evitar perda de detecções nas bordas.",
+            help=t["overlap_help"],
         )
     with col_c:
         max_tiles = st.number_input(
-            "Máximo de tiles:",
+            t["max_tiles_label"],
             min_value=1,
             max_value=2000,
             value=120,
-            help="Limite de tiles para demonstração. Aumente para processar imagens maiores.",
+            help=t["max_tiles_help"],
         )
     with col_d:
         device = st.selectbox(
-            "Dispositivo:",
+            t["device_label"],
             options=["cpu", "0"],
             index=0,
-            help="'cpu' para processador; '0' para GPU NVIDIA (requer CUDA).",
+            help=t["device_help"],
         )
 
     netflora_zip_url = st.text_input(
-        "URL do repositório Netflora (zip):",
+        t["netflora_url_label"],
         value=DEFAULT_NETFLORA_ZIP,
     )
     weights_url = st.text_input(
-        "URL dos pesos do modelo (.pt):",
+        t["weights_url_label"],
         value=DEFAULT_WEIGHTS_URL,
     )
 
 st.divider()
 
-# ==================== AVISO DE PRIMEIRA EXECUÇÃO ====================
+# ==================== FIRST RUN WARNING ====================
 
 if not DEFAULT_WEIGHTS.exists() or not NETFLORA_DIR.exists():
-    st.info(
-        "ℹ️ **Primeira execução:** o modelo de detecção (~135 MB) e o código do Netflora "
-        "serão baixados automaticamente ao clicar em *Executar Detecção*. "
-        "Isso pode levar alguns minutos dependendo da conexão.",
-        icon="⏬",
-    )
+    st.info(t["first_run_info"], icon="⏬")
 
-# ==================== BOTÃO DE EXECUÇÃO ====================
+# ==================== RUN BUTTON ====================
 
 run_disabled = ortho_path is None
 run_col, _ = st.columns([1, 3])
 with run_col:
     run_pipeline = st.button(
-        "🔍 Executar Detecção",
+        t["run_button"],
         type="primary",
         disabled=run_disabled,
         use_container_width=True,
     )
 
-if run_disabled and ortho_option == "Enviar minha ortofoto (.tif)":
-    st.warning("⚠️ Envie uma ortofoto antes de executar.")
+if run_disabled and ortho_option == t["ortho_opt_upload"]:
+    st.warning(t["run_warning"])
 
-# ==================== EXECUÇÃO DO PIPELINE ====================
+# ==================== PIPELINE EXECUTION ====================
 
 if run_pipeline and ortho_path is not None:
     fn = get_pipeline()
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
-    with st.status("🔄 Executando pipeline de detecção...", expanded=True) as status:
+    with st.status(t["pipeline_status"], expanded=True) as status:
 
-        st.write("**1/6** Preparando código do Netflora...")
+        st.write(t["step_prep_netflora"])
         try:
             netflora_root = fn["ensure_netflora_repo"](NETFLORA_DIR, netflora_zip_url)
         except Exception as e:
-            status.update(label="❌ Falha ao preparar Netflora.", state="error")
+            status.update(label=t["step_prep_netflora_err"], state="error")
             st.error(str(e))
             st.stop()
 
         # Use local groups.json (committed to git) as primary; fall back to downloaded copy
         groups_json = GROUPS_JSON if GROUPS_JSON.exists() else netflora_root / "json" / "groups.json"
 
-        st.write("**2/6** Verificando pesos do modelo...")
+        st.write(t["step_check_weights"])
         try:
             weights_file = fn["ensure_weights_file"](DEFAULT_WEIGHTS, weights_url)
         except Exception as e:
-            status.update(label="❌ Falha ao preparar pesos do modelo.", state="error")
+            status.update(label=t["step_check_weights_err"], state="error")
             st.error(str(e))
             st.stop()
 
-        st.write("**3/6** Gerando tiles da ortofoto...")
+        st.write(t["step_gen_tiles"])
         try:
             tile_count = fn["generate_tiles"](
                 ortho_path=ortho_path,
@@ -344,20 +558,20 @@ if run_pipeline and ortho_path is not None:
                 max_tiles=int(max_tiles),
             )
         except Exception as e:
-            status.update(label="❌ Falha ao gerar tiles.", state="error")
+            status.update(label=t["step_gen_tiles_err"], state="error")
             st.error(str(e))
             st.stop()
 
         if tile_count == 0:
-            status.update(label="❌ Nenhum tile válido foi gerado.", state="error")
-            st.error("Nenhum tile válido foi gerado. Verifique se a ortofoto é válida.")
+            status.update(label=t["step_no_tiles_err"], state="error")
+            st.error(t["step_no_tiles_msg"])
             st.stop()
 
-        st.write(f"**3/6** {tile_count} tiles gerados.")
+        st.write(t["step_gen_tiles_done"].format(count=tile_count))
 
         run_name = f"online_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        st.write("**4/6** Executando modelo de detecção...")
+        st.write(t["step_run_detect"])
         detect_result = fn["run_netflora_detect"](
             config=fn["DetectionConfig"](
                 repo_root=netflora_root,
@@ -372,15 +586,15 @@ if run_pipeline and ortho_path is not None:
         )
 
         if detect_result.returncode != 0:
-            status.update(label="❌ Falha na detecção.", state="error")
-            st.error("A execução do detect.py falhou.")
-            with st.expander("Ver log de erro"):
+            status.update(label=t["step_detect_err"], state="error")
+            st.error(t["step_detect_err_msg"])
+            with st.expander(t["step_error_log"]):
                 st.code(detect_result.stderr or detect_result.stdout)
             st.stop()
 
         labels_dir = RUNS_DIR / run_name / "labels"
 
-        st.write("**5/6** Processando resultados...")
+        st.write(t["step_process_results"])
         class_name_map = fn["get_class_name_map"](groups_json, algorithm)
         results_df = fn["build_detection_table"](
             labels_dir=labels_dir,
@@ -389,7 +603,7 @@ if run_pipeline and ortho_path is not None:
         )
         polygons_df = fn["build_detection_polygons_wgs84"](results_df, COORDS_CSV)
 
-        st.write("**6/6** Gerando mapa interativo...")
+        st.write(t["step_gen_map"])
         map_html = fn["build_map_html"](polygons_df, ortho_path)
 
         st.session_state.last_run = {
@@ -405,65 +619,56 @@ if run_pipeline and ortho_path is not None:
             "map_html": map_html,
         }
 
-        status.update(label="✅ Pipeline concluído com sucesso!", state="complete")
+        status.update(label=t["pipeline_done"], state="complete")
     st.rerun()
 
-# ==================== EXIBIÇÃO DE RESULTADOS ====================
+# ==================== RESULTS DISPLAY ====================
 
 if st.session_state.last_run is not None:
     run_data = st.session_state.last_run
     fn = get_pipeline()
 
     st.divider()
-    st.markdown("## 📊 Resultados da detecção")
+    st.markdown(t["results_section"])
 
-    # Métricas resumidas
     n_detections = len(run_data["results_df"])
     n_classes = run_data["results_df"]["class_name"].nunique() if not run_data["results_df"].empty else 0
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("🔲 Tiles processados", run_data["tile_count"])
-    m2.metric("🌱 Plantas detectadas", n_detections)
-    m3.metric("🏷️ Espécies identificadas", n_classes)
+    m1.metric(t["metric_tiles"], run_data["tile_count"])
+    m2.metric(t["metric_plants"], n_detections)
+    m3.metric(t["metric_species"], n_classes)
 
     st.divider()
 
-    # Mapa interativo
-    st.markdown("### 🗺️ Mapa interativo")
-    st.caption(
-        "O mapa exibe as detecções georreferenciadas. "
-        "Passe o mouse sobre os marcadores para ver a espécie e a confiança da detecção. "
-        "Use os controles no canto superior direito para alternar as camadas do mapa."
-    )
+    st.markdown(t["map_section"])
+    st.caption(t["map_caption"])
 
     if run_data.get("map_html"):
         components.v1.html(run_data["map_html"], height=800, scrolling=False)
     else:
-        st.info("Mapa não disponível para este resultado.")
+        st.info(t["map_unavailable"])
 
     st.divider()
 
-    # Tabela de resultados
-    st.markdown("### 📋 Tabela de detecções")
+    st.markdown(t["table_section"])
 
     results_df = run_data["results_df"]
     if results_df.empty:
-        st.info("Nenhuma detecção encontrada com os parâmetros atuais. Tente reduzir a confiança mínima.")
+        st.info(t["table_empty"])
     else:
-        # Tabela formatada
         display_df = results_df[["filename", "class_name", "confidence"]].copy()
-        display_df.columns = ["Tile", "Espécie", "Confiança"]
+        display_df.columns = [t["col_tile"], t["col_species"], t["col_confidence"]]
         if "confidence" in results_df.columns:
-            display_df["Confiança"] = display_df["Confiança"].map(
+            display_df[t["col_confidence"]] = display_df[t["col_confidence"]].map(
                 lambda x: f"{x:.2%}" if x is not None else "—"
             )
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     st.divider()
 
-    # Exportação
-    st.markdown("### 💾 Exportar resultados")
-    st.caption("O arquivo ZIP contém: mapa interativo (.html), planilha de detecções (.csv) e shapefile georreferenciado (.shp e arquivos auxiliares).")
+    st.markdown(t["export_section"])
+    st.caption(t["export_caption"])
 
     export_col, clear_col = st.columns([1, 1])
 
@@ -471,32 +676,31 @@ if st.session_state.last_run is not None:
         try:
             zip_bytes = fn["export_results_zip"](run_data, run_data.get("map_html", ""))
             st.download_button(
-                label="📦 Baixar ZIP de resultados",
+                label=t["export_button"],
                 data=zip_bytes,
                 file_name=f"netflora_{run_data['run_name']}.zip",
                 mime="application/zip",
                 use_container_width=True,
             )
         except Exception as e:
-            st.error(f"Erro ao gerar exportação: {e}")
+            st.error(t["export_error"].format(error=e))
 
     with clear_col:
-        if st.button("🗑️ Limpar resultados", use_container_width=True):
+        if st.button(t["clear_button"], use_container_width=True):
             st.session_state.last_run = None
             st.rerun()
 
-    # Visualização por tile (expansível)
     st.divider()
-    with st.expander("🔬 Visualizar detecções por tile"):
+    with st.expander(t["tile_expander"]):
         tile_files = run_data.get("tile_files", [])
         labels_dir = run_data.get("labels_dir")
         class_name_map = run_data.get("class_name_map", {})
 
         if not tile_files:
-            st.info("Nenhum tile disponível.")
+            st.info(t["tile_no_tiles"])
         else:
             selected_tile = st.selectbox(
-                "Escolha um tile para inspecionar:",
+                t["tile_select"],
                 [p.name for p in tile_files],
                 key=f"tile_sel_{run_data['run_name']}",
             )
@@ -508,16 +712,16 @@ if st.session_state.last_run is not None:
                 annotated = fn["draw_tile_detections"](tile_path, label_path, class_name_map)
                 col_orig, col_det = st.columns(2)
                 with col_orig:
-                    st.caption("**Original**")
+                    st.caption(t["tile_orig_caption"])
                     st.image(Image.open(tile_path), use_container_width=True)
                 with col_det:
-                    st.caption("**Com detecções**")
+                    st.caption(t["tile_det_caption"])
                     st.image(annotated, use_container_width=True)
             else:
-                st.image(Image.open(tile_path), caption="Sem detecções neste tile", use_container_width=True)
+                st.image(Image.open(tile_path), caption=t["tile_no_det"], use_container_width=True)
 
 
-# ==================== RODAPÉ ====================
+# ==================== FOOTER ====================
 
 st.divider()
 st.markdown(
