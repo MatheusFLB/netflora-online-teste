@@ -328,7 +328,9 @@ def get_pipeline():
         DetectionConfig,
         build_detection_polygons_wgs84,
         build_detection_table,
+        build_map,
         build_map_html,
+        render_map_html,
         draw_tile_detections,
         ensure_netflora_repo,
         ensure_weights_file,
@@ -342,7 +344,9 @@ def get_pipeline():
         "DetectionConfig": DetectionConfig,
         "build_detection_polygons_wgs84": build_detection_polygons_wgs84,
         "build_detection_table": build_detection_table,
+        "build_map": build_map,
         "build_map_html": build_map_html,
+        "render_map_html": render_map_html,
         "draw_tile_detections": draw_tile_detections,
         "ensure_netflora_repo": ensure_netflora_repo,
         "ensure_weights_file": ensure_weights_file,
@@ -644,15 +648,12 @@ if run_pipeline and ortho_path is not None:
         _progress.progress(5 / 6)
 
         st.write(t["step_gen_map"])
-        map_html = fn["build_map_html"](polygons_df, ortho_path)
-        _progress.progress(6 / 6)
-
-        # Write HTML to disk immediately — avoids keeping a large string in
-        # session state (the base64 ortho overlay can be several MB) which
-        # doubles peak RAM on the next run.
+        # Build the folium Map object for display, then render HTML to disk for export.
+        # Storing map_obj (not the rendered HTML string) in session state keeps memory low.
+        map_obj = fn["build_map"](polygons_df, ortho_path)
         map_html_path = RUNS_DIR / run_name / "map.html"
-        map_html_path.write_text(map_html, encoding="utf-8")
-        del map_html  # release from memory right away
+        map_html_path.write_text(fn["render_map_html"](map_obj), encoding="utf-8")
+        _progress.progress(6 / 6)
 
         st.session_state.last_run = {
             "run_name": run_name,
@@ -664,6 +665,7 @@ if run_pipeline and ortho_path is not None:
             "class_name_map": class_name_map,
             "ortho_path": ortho_path,
             "algorithm": algorithm,
+            "map_obj": map_obj,
             "map_html_path": map_html_path,
         }
 
@@ -701,9 +703,10 @@ if st.session_state.last_run is not None:
     st.markdown(t["map_section"])
     st.caption(t["map_caption"])
 
-    _map_html_path = run_data.get("map_html_path")
-    if _map_html_path and Path(_map_html_path).exists():
-        st.html(Path(_map_html_path).read_text(encoding="utf-8"))
+    _map_obj = run_data.get("map_obj")
+    if _map_obj is not None:
+        from streamlit_folium import st_folium
+        st_folium(_map_obj, height=500, returned_objects=[])
     else:
         st.info(t["map_unavailable"])
 

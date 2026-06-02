@@ -448,10 +448,9 @@ def _render_map(m: "folium.Map") -> str:
     return html
 
 
-def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None) -> str:
-    """Build a folium map with detection polygons and optional ortho overlay."""
+def _build_folium_map(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None) -> "folium.Map":
+    """Build and return a folium.Map object (tiles + polygons + optional ortho overlay)."""
     if polygons_df.empty:
-        # Return a default map centered on Brazil
         m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None, max_zoom=22)
         folium.TileLayer(
             tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
@@ -462,7 +461,7 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
             show=True,
             overlay=False,
         ).add_to(m)
-        return _render_map(m)
+        return m
 
     all_lats, all_lons = [], []
     for _, row in polygons_df.iterrows():
@@ -530,8 +529,22 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     fg.add_to(m)
     folium.LayerControl(collapsed=True).add_to(m)
 
-    return _render_map(m)
+    return m
 
+
+def build_map(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None) -> "folium.Map":
+    """Return folium.Map for display via streamlit-folium."""
+    return _build_folium_map(polygons_df, ortho_path)
+
+
+def render_map_html(map_obj: "folium.Map") -> str:
+    """Render a folium.Map object to a self-contained HTML string (for export)."""
+    return _render_map(map_obj)
+
+
+def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None) -> str:
+    """Build a folium map HTML string (kept for export/ZIP generation)."""
+    return _render_map(_build_folium_map(polygons_df, ortho_path))
 
 # ==================== EXPORTAÇÃO ====================
 
