@@ -423,6 +423,31 @@ html, body { margin: 0 !important; padding: 0 !important; height: 100% !importan
         resize();
     }
     window.addEventListener("resize", resize);
+
+    // Force satellite layer active and remove OSM from initial view
+    function forceSatellite() {
+        var mapKeys = Object.keys(window).filter(function(k) { return /^map_/.test(k) && window[k] && typeof window[k].eachLayer === 'function'; });
+        if (!mapKeys.length) { setTimeout(forceSatellite, 200); return; }
+        var map = window[mapKeys[0]];
+        var satLayer = null;
+        map.eachLayer(function(l) {
+            if (l._url && l._url.indexOf('google.com') !== -1) { satLayer = l; }
+        });
+        if (satLayer && !map.hasLayer(satLayer)) { satLayer.addTo(map); }
+        // Remove any non-satellite tile layers from initial view
+        map.eachLayer(function(l) {
+            if (l._url && l._url.indexOf('google.com') === -1 && l._url.indexOf('{z}') !== -1) {
+                map.removeLayer(l);
+            }
+        });
+        // Ensure map respects maxZoom=22
+        if (map.options && map.options.maxZoom < 22) { map.options.maxZoom = 22; }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(forceSatellite, 300); });
+    } else {
+        setTimeout(forceSatellite, 300);
+    }
 })();
 </script>
 """
@@ -445,14 +470,15 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     """Build a folium map with detection polygons and optional ortho overlay."""
     if polygons_df.empty:
         # Return a default map centered on Brazil
-        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None, max_zoom=23)
+        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None, max_zoom=22)
         folium.TileLayer(
-            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            attr="Esri",
+            tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+            attr="Google",
             name="Satélite",
-            max_zoom=23,
-            max_native_zoom=23,
+            max_zoom=22,
+            max_native_zoom=21,
             show=True,
+            overlay=False,
         ).add_to(m)
         return _render_map(m)
 
@@ -465,22 +491,24 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     center_lat = sum(all_lats) / len(all_lats)
     center_lon = sum(all_lons) / len(all_lons)
 
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=None, control_scale=True, max_zoom=23)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=None, control_scale=True, max_zoom=22)
     folium.TileLayer(
-        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri",
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google",
         name="Satélite",
-        max_zoom=23,
-        max_native_zoom=23,
+        max_zoom=22,
+        max_native_zoom=21,
         show=True,
+        overlay=False,
     ).add_to(m)
     folium.TileLayer(
-        tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        name="OpenStreetMap",
-        max_zoom=23,
-        max_native_zoom=19,
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google",
+        name="Mapa",
+        max_zoom=22,
+        max_native_zoom=21,
         show=False,
+        overlay=False,
     ).add_to(m)
 
     # Optional: overlay ortho image
