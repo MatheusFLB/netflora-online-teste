@@ -402,6 +402,7 @@ _RESPONSIVE_INJECT = """\
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 html, body { margin: 0 !important; padding: 0 !important; height: 100% !important; overflow: hidden; }
+.leaflet-control-attribution { display: none !important; }
 </style>
 <script>
 (function () {
@@ -444,12 +445,13 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     """Build a folium map with detection polygons and optional ortho overlay."""
     if polygons_df.empty:
         # Return a default map centered on Brazil
-        m = folium.Map(
-            location=[-15.0, -55.0],
-            zoom_start=4,
+        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None)
+        folium.TileLayer(
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            attr="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-        )
+            attr="Esri",
+            name="Satélite",
+            max_zoom=19,
+        ).add_to(m)
         return _render_map(m)
 
     all_lats, all_lons = [], []
@@ -461,13 +463,13 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     center_lat = sum(all_lats) / len(all_lats)
     center_lon = sum(all_lons) / len(all_lons)
 
-    esri_imagery = folium.TileLayer(
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=None, control_scale=True)
+    folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attr="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+        attr="Esri",
         name="Satélite",
         max_zoom=19,
-    )
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=esri_imagery, control_scale=True)
+    ).add_to(m)
     folium.TileLayer(
         tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -510,7 +512,7 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
         ).add_to(fg)
 
     fg.add_to(m)
-    folium.LayerControl(collapsed=False).add_to(m)
+    folium.LayerControl(collapsed=True).add_to(m)
 
     return _render_map(m)
 
