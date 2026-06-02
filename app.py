@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
-from streamlit import components
 
 # ==================== CONSTANTES ====================
 
@@ -542,7 +541,7 @@ with run_col:
         t["run_button"],
         type="primary",
         disabled=run_disabled,
-        use_container_width=True,
+        width="stretch",
     )
 
 if run_disabled and ortho_option == t["ortho_opt_upload"]:
@@ -680,10 +679,9 @@ if st.session_state.last_run is not None:
 
     st.markdown('<div id="results-anchor"></div>', unsafe_allow_html=True)
     if st.session_state.get("scroll_to_results"):
-        components.v1.html(
-            '<script>window.parent.document.getElementById("results-anchor")'
-            '.scrollIntoView({behavior:"smooth"});</script>',
-            height=1,
+        st.html(
+            '<script>document.getElementById("results-anchor")'
+            '.scrollIntoView({behavior:"smooth"});</script>'
         )
         st.session_state.scroll_to_results = False
 
@@ -705,7 +703,7 @@ if st.session_state.last_run is not None:
 
     _map_html_path = run_data.get("map_html_path")
     if _map_html_path and Path(_map_html_path).exists():
-        components.v1.html(Path(_map_html_path).read_text(encoding="utf-8"), height=500, scrolling=False)
+        st.html(Path(_map_html_path).read_text(encoding="utf-8"))
     else:
         st.info(t["map_unavailable"])
 
@@ -723,7 +721,7 @@ if st.session_state.last_run is not None:
             display_df[t["col_confidence"]] = display_df[t["col_confidence"]].map(
                 lambda x: f"{x:.2%}" if x is not None else "—"
             )
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.dataframe(display_df, width="stretch", hide_index=True)
 
     st.divider()
 
@@ -742,13 +740,13 @@ if st.session_state.last_run is not None:
                 data=zip_bytes,
                 file_name=f"netflora_{run_data['run_name']}.zip",
                 mime="application/zip",
-                use_container_width=True,
+                width="stretch",
             )
         except Exception as e:
             st.error(t["export_error"].format(error=e))
 
     with clear_col:
-        if st.button(t["clear_button"], use_container_width=True):
+        if st.button(t["clear_button"], width="stretch"):
             st.session_state.last_run = None
             st.rerun()
 
@@ -775,12 +773,12 @@ if st.session_state.last_run is not None:
                 col_orig, col_det = st.columns(2)
                 with col_orig:
                     st.caption(t["tile_orig_caption"])
-                    st.image(Image.open(tile_path), use_container_width=True)
+                    st.image(Image.open(tile_path), width="stretch")
                 with col_det:
                     st.caption(t["tile_det_caption"])
-                    st.image(annotated, use_container_width=True)
+                    st.image(annotated, width="stretch")
             else:
-                st.image(Image.open(tile_path), caption=t["tile_no_det"], use_container_width=True)
+                st.image(Image.open(tile_path), caption=t["tile_no_det"], width="stretch")
 
 
 # ==================== FOOTER ====================

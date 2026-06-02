@@ -401,29 +401,11 @@ def build_ortho_preview(ortho_path: Path, max_side: int = 400):
 _RESPONSIVE_INJECT = """\
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-html, body { margin: 0 !important; padding: 0 !important; height: 100% !important; overflow: hidden; }
+html, body { margin: 0 !important; padding: 0 !important; height: 520px !important; overflow: hidden; }
 .leaflet-control-attribution { display: none !important; }
 </style>
 <script>
 (function () {
-    function resize() {
-        var vw = window.innerWidth;
-        var h = vw < 480  ? Math.round(vw * 1.6) :
-                vw < 768  ? Math.round(vw * 1.4) :
-                vw < 1024 ? 620 : 800;
-        h = Math.max(h, 420);
-        window.parent.postMessage(
-            { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h },
-            "*"
-        );
-    }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", resize);
-    } else {
-        resize();
-    }
-    window.addEventListener("resize", resize);
-
     // Force satellite layer active and remove OSM from initial view
     function forceSatellite() {
         var mapKeys = Object.keys(window).filter(function(k) { return /^map_/.test(k) && window[k] && typeof window[k].eachLayer === 'function'; });
