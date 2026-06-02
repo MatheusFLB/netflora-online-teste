@@ -550,6 +550,12 @@ if run_disabled and ortho_option == t["ortho_opt_upload"]:
 # ==================== PIPELINE EXECUTION ====================
 
 if run_pipeline and ortho_path is not None:
+    # Free memory from the previous run (map_html can be hundreds of MB due to
+    # the base64-encoded ortho overlay embedded inline by folium.ImageOverlay).
+    # Keeping the old session state alive while building the new one doubles/triples
+    # peak RAM and causes a silent OOM kill → the generic "Oh no" crash page.
+    st.session_state.last_run = None
+
     fn = get_pipeline()
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
