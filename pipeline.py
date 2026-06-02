@@ -372,7 +372,7 @@ def draw_tile_detections(tile_path: Path, label_path: Path, class_name_map: Dict
     return image
 
 
-def build_ortho_preview(ortho_path: Path, max_side: int = 1800):
+def build_ortho_preview(ortho_path: Path, max_side: int = 400):
     """Returns (rgb_array, bounds_latlon) for ortofoto overlay on folium map."""
     with rasterio.open(ortho_path) as src:
         bands = [1, 2, 3] if src.count >= 3 else [1]

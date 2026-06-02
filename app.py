@@ -6,6 +6,7 @@ Desenvolvido com base no projeto Netflora da Embrapa.
 Layout sem barra lateral, simples e didático.
 """
 
+import gc
 from datetime import datetime
 from pathlib import Path
 
@@ -555,6 +556,7 @@ if run_pipeline and ortho_path is not None:
     # Keeping the old session state alive while building the new one doubles/triples
     # peak RAM and causes a silent OOM kill → the generic "Oh no" crash page.
     st.session_state.last_run = None
+    gc.collect()  # force-release previous run's large objects before pipeline starts
 
     fn = get_pipeline()
     WORKDIR.mkdir(parents=True, exist_ok=True)
@@ -646,6 +648,13 @@ if run_pipeline and ortho_path is not None:
         map_html = fn["build_map_html"](polygons_df, ortho_path)
         _progress.progress(6 / 6)
 
+        # Write HTML to disk immediately — avoids keeping a large string in
+        # session state (the base64 ortho overlay can be several MB) which
+        # doubles peak RAM on the next run.
+        map_html_path = RUNS_DIR / run_name / "map.html"
+        map_html_path.write_text(map_html, encoding="utf-8")
+        del map_html  # release from memory right away
+
         st.session_state.last_run = {
             "run_name": run_name,
             "tile_count": tile_count,
@@ -656,7 +665,7 @@ if run_pipeline and ortho_path is not None:
             "class_name_map": class_name_map,
             "ortho_path": ortho_path,
             "algorithm": algorithm,
-            "map_html": map_html,
+            "map_html_path": map_html_path,
         }
 
         status.update(label=t["pipeline_done"], state="complete")
@@ -694,8 +703,9 @@ if st.session_state.last_run is not None:
     st.markdown(t["map_section"])
     st.caption(t["map_caption"])
 
-    if run_data.get("map_html"):
-        components.v1.html(run_data["map_html"], height=500, scrolling=False)
+    _map_html_path = run_data.get("map_html_path")
+    if _map_html_path and Path(_map_html_path).exists():
+        components.v1.html(Path(_map_html_path).read_text(encoding="utf-8"), height=500, scrolling=False)
     else:
         st.info(t["map_unavailable"])
 
@@ -724,7 +734,9 @@ if st.session_state.last_run is not None:
 
     with export_col:
         try:
-            zip_bytes = fn["export_results_zip"](run_data, run_data.get("map_html", ""))
+            _exp_map_path = run_data.get("map_html_path")
+            _exp_map_html = Path(_exp_map_path).read_text(encoding="utf-8") if _exp_map_path and Path(_exp_map_path).exists() else ""
+            zip_bytes = fn["export_results_zip"](run_data, _exp_map_html)
             st.download_button(
                 label=t["export_button"],
                 data=zip_bytes,
