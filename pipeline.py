@@ -444,7 +444,12 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     """Build a folium map with detection polygons and optional ortho overlay."""
     if polygons_df.empty:
         # Return a default map centered on Brazil
-        m = folium.Map(location=[-15.0, -55.0], zoom_start=4)
+        m = folium.Map(
+            location=[-15.0, -55.0],
+            zoom_start=4,
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+        )
         return _render_map(m)
 
     all_lats, all_lons = [], []
@@ -456,9 +461,19 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     center_lat = sum(all_lats) / len(all_lats)
     center_lon = sum(all_lons) / len(all_lons)
 
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles="OpenStreetMap", control_scale=True)
-    folium.TileLayer("CartoDB positron", name="Mapa claro").add_to(m)
-    folium.TileLayer("Esri.WorldImagery", attr="Esri", name="Satélite").add_to(m)
+    esri_imagery = folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+        name="Satélite",
+        max_zoom=19,
+    )
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=esri_imagery, control_scale=True)
+    folium.TileLayer(
+        tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        name="OpenStreetMap",
+        max_zoom=19,
+    ).add_to(m)
 
     # Optional: overlay ortho image
     if ortho_path and ortho_path.exists():
