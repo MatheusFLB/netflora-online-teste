@@ -281,17 +281,41 @@ h3 { color: #2d6a2d; }
     margin-bottom: 0.5rem;
     color: #1a1a1a;
 }
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
 .metric-card {
     background: #f0f7f0;
     border-radius: 8px;
     padding: 1rem;
     text-align: center;
 }
-footer-section {
+.footer-section {
     text-align: center;
     font-size: 14px;
     line-height: 1.8;
     color: #444;
+}
+@media (max-width: 768px) {
+    .main .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .stButton > button[kind="primary"] {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+}
+@media (max-width: 480px) {
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -342,18 +366,20 @@ if "last_run" not in st.session_state:
     st.session_state.last_run = None
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
+if "scroll_to_results" not in st.session_state:
+    st.session_state.scroll_to_results = False
 
 # ==================== LANGUAGE SELECTOR ====================
 
-_lang_col, _ = st.columns([1, 5])
+_, _lang_col = st.columns([4, 2])
 with _lang_col:
     _lang_choice = st.selectbox(
         TRANSLATIONS["en"]["lang_selector_label"],
-        options=["English", "Português"],
+        options=["🌎 English", "🇧🇷 Português"],
         index=0 if st.session_state.lang == "en" else 1,
         label_visibility="collapsed",
     )
-    _lang_new = "en" if _lang_choice == "English" else "pt"
+    _lang_new = "en" if _lang_choice == "🌎 English" else "pt"
     if _lang_new != st.session_state.lang:
         st.session_state.lang = _lang_new
         st.rerun()
@@ -371,15 +397,15 @@ st.divider()
 
 st.markdown(t["how_it_works"])
 
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f'<div class="step-box">{t["step1"]}</div>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div class="step-box">{t["step2"]}</div>', unsafe_allow_html=True)
-with col3:
-    st.markdown(f'<div class="step-box">{t["step3"]}</div>', unsafe_allow_html=True)
-with col4:
-    st.markdown(f'<div class="step-box">{t["step4"]}</div>', unsafe_allow_html=True)
+st.markdown(
+    f'<div class="steps-grid">'
+    f'<div class="step-box">{t["step1"]}</div>'
+    f'<div class="step-box">{t["step2"]}</div>'
+    f'<div class="step-box">{t["step3"]}</div>'
+    f'<div class="step-box">{t["step4"]}</div>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
 st.markdown(t["how_desc"])
 
@@ -456,7 +482,7 @@ with col_conf:
     )
 
 with st.expander(t["advanced_expander"]):
-    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a, col_b = st.columns(2)
     with col_a:
         tile_size = st.select_slider(
             t["tile_size_label"],
@@ -473,6 +499,7 @@ with st.expander(t["advanced_expander"]):
             step=32,
             help=t["overlap_help"],
         )
+    col_c, col_d = st.columns(2)
     with col_c:
         max_tiles = st.number_input(
             t["max_tiles_label"],
@@ -508,7 +535,7 @@ if not DEFAULT_WEIGHTS.exists() or not NETFLORA_DIR.exists():
 # ==================== RUN BUTTON ====================
 
 run_disabled = ortho_path is None
-run_col, _ = st.columns([1, 3])
+run_col, _ = st.columns([2, 2])
 with run_col:
     run_pipeline = st.button(
         t["run_button"],
@@ -527,6 +554,7 @@ if run_pipeline and ortho_path is not None:
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
     with st.status(t["pipeline_status"], expanded=True) as status:
+        _progress = st.progress(0)
 
         st.write(t["step_prep_netflora"])
         try:
@@ -535,6 +563,7 @@ if run_pipeline and ortho_path is not None:
             status.update(label=t["step_prep_netflora_err"], state="error")
             st.error(str(e))
             st.stop()
+        _progress.progress(1 / 6)
 
         # Use local groups.json (committed to git) as primary; fall back to downloaded copy
         groups_json = GROUPS_JSON if GROUPS_JSON.exists() else netflora_root / "json" / "groups.json"
@@ -546,6 +575,7 @@ if run_pipeline and ortho_path is not None:
             status.update(label=t["step_check_weights_err"], state="error")
             st.error(str(e))
             st.stop()
+        _progress.progress(2 / 6)
 
         st.write(t["step_gen_tiles"])
         try:
@@ -561,6 +591,7 @@ if run_pipeline and ortho_path is not None:
             status.update(label=t["step_gen_tiles_err"], state="error")
             st.error(str(e))
             st.stop()
+        _progress.progress(3 / 6)
 
         if tile_count == 0:
             status.update(label=t["step_no_tiles_err"], state="error")
@@ -584,6 +615,7 @@ if run_pipeline and ortho_path is not None:
                 run_name=run_name,
             )
         )
+        _progress.progress(4 / 6)
 
         if detect_result.returncode != 0:
             status.update(label=t["step_detect_err"], state="error")
@@ -602,9 +634,11 @@ if run_pipeline and ortho_path is not None:
             class_name_map=class_name_map,
         )
         polygons_df = fn["build_detection_polygons_wgs84"](results_df, COORDS_CSV)
+        _progress.progress(5 / 6)
 
         st.write(t["step_gen_map"])
         map_html = fn["build_map_html"](polygons_df, ortho_path)
+        _progress.progress(6 / 6)
 
         st.session_state.last_run = {
             "run_name": run_name,
@@ -620,6 +654,7 @@ if run_pipeline and ortho_path is not None:
         }
 
         status.update(label=t["pipeline_done"], state="complete")
+    st.session_state.scroll_to_results = True
     st.rerun()
 
 # ==================== RESULTS DISPLAY ====================
@@ -627,6 +662,15 @@ if run_pipeline and ortho_path is not None:
 if st.session_state.last_run is not None:
     run_data = st.session_state.last_run
     fn = get_pipeline()
+
+    st.markdown('<div id="results-anchor"></div>', unsafe_allow_html=True)
+    if st.session_state.get("scroll_to_results"):
+        components.v1.html(
+            '<script>window.parent.document.getElementById("results-anchor")'
+            '.scrollIntoView({behavior:"smooth"});</script>',
+            height=1,
+        )
+        st.session_state.scroll_to_results = False
 
     st.divider()
     st.markdown(t["results_section"])
@@ -645,7 +689,7 @@ if st.session_state.last_run is not None:
     st.caption(t["map_caption"])
 
     if run_data.get("map_html"):
-        components.v1.html(run_data["map_html"], height=800, scrolling=False)
+        components.v1.html(run_data["map_html"], height=500, scrolling=False)
     else:
         st.info(t["map_unavailable"])
 
