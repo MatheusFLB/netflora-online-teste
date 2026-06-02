@@ -445,12 +445,14 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     """Build a folium map with detection polygons and optional ortho overlay."""
     if polygons_df.empty:
         # Return a default map centered on Brazil
-        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None)
+        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles=None, max_zoom=20)
         folium.TileLayer(
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             attr="Esri",
             name="Satélite",
-            max_zoom=19,
+            max_zoom=20,
+            max_native_zoom=19,
+            show=True,
         ).add_to(m)
         return _render_map(m)
 
@@ -463,18 +465,22 @@ def build_map_html(polygons_df: pd.DataFrame, ortho_path: Optional[Path] = None)
     center_lat = sum(all_lats) / len(all_lats)
     center_lon = sum(all_lons) / len(all_lons)
 
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=None, control_scale=True)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=18, tiles=None, control_scale=True, max_zoom=20)
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri",
         name="Satélite",
-        max_zoom=19,
+        max_zoom=20,
+        max_native_zoom=19,
+        show=True,
     ).add_to(m)
     folium.TileLayer(
         tiles="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         name="OpenStreetMap",
-        max_zoom=19,
+        max_zoom=20,
+        max_native_zoom=19,
+        show=False,
     ).add_to(m)
 
     # Optional: overlay ortho image
