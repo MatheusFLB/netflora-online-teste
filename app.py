@@ -7,8 +7,13 @@ Layout sem barra lateral, simples e didático.
 """
 
 import gc
+import os
+import time
+import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator
 
 import streamlit as st
 
@@ -20,12 +25,83 @@ NETFLORA_DIR = WORKDIR / "netflora_src"
 TILES_DIR = WORKDIR / "tiles"
 COORDS_CSV = WORKDIR / "tile_coords.csv"
 RUNS_DIR = WORKDIR / "runs"
+LOCKS_DIR = WORKDIR / "locks"
+INFERENCE_LOCK_FILE = LOCKS_DIR / "inference.lock"
 DEFAULT_ORTHO = APP_ROOT / "ortofoto" / "ortofoto_exemplo1_corte.tif"
 DEFAULT_WEIGHTS = WORKDIR / "model_weights.pt"
 DEFAULT_NETFLORA_ZIP = "https://github.com/NetFlora/Netflora/archive/refs/heads/main.zip"
 DEFAULT_WEIGHTS_URL = "https://github.com/NetFlora/Netflora/releases/download/Assets/PMFS_Embrapa00.pt"
 # groups.json local (committed to git) — always available without downloading netflora_src
 GROUPS_JSON = APP_ROOT / "json" / "groups.json"
+
+
+def _sanitize_filename(filename: str) -> str:
+    safe = "".join(ch for ch in Path(filename).name if ch.isalnum() or ch in ("-", "_", "."))
+    return safe.strip("._") or "upload.tif"
+
+
+def _get_session_id() -> str:
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = uuid.uuid4().hex
+    return st.session_state.session_id
+
+
+def _get_session_root() -> Path:
+    session_root = WORKDIR / "sessions" / _get_session_id()
+    session_root.mkdir(parents=True, exist_ok=True)
+    return session_root
+
+
+def _new_unique_run_name() -> str:
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    return f"online_{ts}_{uuid.uuid4().hex[:8]}"
+
+
+@contextmanager
+def acquire_inference_lock(
+    lock_path: Path,
+    wait_timeout: int = 1800,
+    stale_seconds: int = 7200,
+    poll_seconds: float = 1.0,
+) -> Iterator[None]:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = None
+    deadline = time.time() + wait_timeout
+    waiting_note_shown = False
+
+    while True:
+        try:
+            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            owner = f"session={_get_session_id()} pid={os.getpid()} ts={int(time.time())}"
+            os.write(lock_fd, owner.encode("utf-8"))
+            os.close(lock_fd)
+            lock_fd = None
+            break
+        except FileExistsError:
+            try:
+                if time.time() - lock_path.stat().st_mtime > stale_seconds:
+                    lock_path.unlink(missing_ok=True)
+                    continue
+            except FileNotFoundError:
+                continue
+
+            if time.time() >= deadline:
+                raise TimeoutError("Tempo de espera excedido na fila de inferência. Tente novamente em instantes.")
+
+            if not waiting_note_shown:
+                st.info("Outro usuário está executando detecção agora. Sua execução está em fila e iniciará automaticamente.")
+                waiting_note_shown = True
+            time.sleep(poll_seconds)
+
+    try:
+        yield
+    finally:
+        if lock_fd is not None:
+            try:
+                os.close(lock_fd)
+            except OSError:
+                pass
+        lock_path.unlink(missing_ok=True)
 
 # ==================== TRANSLATIONS ====================
 
@@ -443,7 +519,10 @@ else:
     )
     if uploaded is not None:
         WORKDIR.mkdir(parents=True, exist_ok=True)
-        uploaded_ortho_path = WORKDIR / "inputs" / uploaded.name
+        session_inputs_dir = _get_session_root() / "inputs"
+        safe_name = _sanitize_filename(uploaded.name)
+        unique_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}_{safe_name}"
+        uploaded_ortho_path = session_inputs_dir / unique_name
         uploaded_ortho_path.parent.mkdir(parents=True, exist_ok=True)
         with uploaded_ortho_path.open("wb") as f:
             f.write(uploaded.getbuffer())
@@ -563,6 +642,13 @@ if run_pipeline and ortho_path is not None:
 
     fn = get_pipeline()
     WORKDIR.mkdir(parents=True, exist_ok=True)
+    session_root = _get_session_root()
+    run_name = _new_unique_run_name()
+    run_workspace = session_root / "runs" / run_name
+    run_tiles_dir = run_workspace / "tiles"
+    run_coords_csv = run_workspace / "tile_coords.csv"
+    run_project_dir = run_workspace / "detections"
+    run_workspace.mkdir(parents=True, exist_ok=True)
 
     with st.status(t["pipeline_status"], expanded=True) as status:
         _progress = st.progress(0)
@@ -592,8 +678,8 @@ if run_pipeline and ortho_path is not None:
         try:
             tile_count = fn["generate_tiles"](
                 ortho_path=ortho_path,
-                output_dir=TILES_DIR,
-                coords_csv=COORDS_CSV,
+                output_dir=run_tiles_dir,
+                coords_csv=run_coords_csv,
                 tile_size=tile_size,
                 overlap=overlap,
                 max_tiles=int(max_tiles),
@@ -611,21 +697,25 @@ if run_pipeline and ortho_path is not None:
 
         st.write(t["step_gen_tiles_done"].format(count=tile_count))
 
-        run_name = f"online_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
         st.write(t["step_run_detect"])
-        detect_result = fn["run_netflora_detect"](
-            config=fn["DetectionConfig"](
-                repo_root=netflora_root,
-                weights_path=weights_file,
-                source_dir=TILES_DIR,
-                img_size=tile_size,
-                conf_thres=conf_thres,
-                device=device,
-                project_dir=RUNS_DIR,
-                run_name=run_name,
-            )
-        )
+        try:
+            with acquire_inference_lock(INFERENCE_LOCK_FILE):
+                detect_result = fn["run_netflora_detect"](
+                    config=fn["DetectionConfig"](
+                        repo_root=netflora_root,
+                        weights_path=weights_file,
+                        source_dir=run_tiles_dir,
+                        img_size=tile_size,
+                        conf_thres=conf_thres,
+                        device=device,
+                        project_dir=run_project_dir,
+                        run_name=run_name,
+                    )
+                )
+        except TimeoutError as e:
+            status.update(label=t["step_detect_err"], state="error")
+            st.error(str(e))
+            st.stop()
         _progress.progress(4 / 6)
 
         if detect_result.returncode != 0:
@@ -635,23 +725,23 @@ if run_pipeline and ortho_path is not None:
                 st.code(detect_result.stderr or detect_result.stdout)
             st.stop()
 
-        labels_dir = RUNS_DIR / run_name / "labels"
+        labels_dir = run_project_dir / run_name / "labels"
 
         st.write(t["step_process_results"])
         class_name_map = fn["get_class_name_map"](groups_json, algorithm)
         results_df = fn["build_detection_table"](
             labels_dir=labels_dir,
-            coords_csv=COORDS_CSV,
+            coords_csv=run_coords_csv,
             class_name_map=class_name_map,
         )
-        polygons_df = fn["build_detection_polygons_wgs84"](results_df, COORDS_CSV)
+        polygons_df = fn["build_detection_polygons_wgs84"](results_df, run_coords_csv)
         _progress.progress(5 / 6)
 
         st.write(t["step_gen_map"])
         # Build the folium Map object for display, then render HTML to disk for export.
         # Storing map_obj (not the rendered HTML string) in session state keeps memory low.
         map_obj = fn["build_map"](polygons_df, ortho_path)
-        map_html_path = RUNS_DIR / run_name / "map.html"
+        map_html_path = run_workspace / "map.html"
         map_html_path.write_text(fn["render_map_html"](map_obj), encoding="utf-8")
         _progress.progress(6 / 6)
 
@@ -660,7 +750,8 @@ if run_pipeline and ortho_path is not None:
             "tile_count": tile_count,
             "results_df": results_df,
             "polygons_df": polygons_df,
-            "tile_files": sorted(TILES_DIR.glob("*.jpg")),
+            "tile_dir": run_tiles_dir,
+            "tile_files": sorted(run_tiles_dir.glob("*.jpg")),
             "labels_dir": labels_dir,
             "class_name_map": class_name_map,
             "ortho_path": ortho_path,
@@ -756,6 +847,7 @@ if st.session_state.last_run is not None:
     st.divider()
     with st.expander(t["tile_expander"]):
         tile_files = run_data.get("tile_files", [])
+        tile_dir = run_data.get("tile_dir", TILES_DIR)
         labels_dir = run_data.get("labels_dir")
         class_name_map = run_data.get("class_name_map", {})
 
@@ -768,7 +860,7 @@ if st.session_state.last_run is not None:
                 key=f"tile_sel_{run_data['run_name']}",
             )
             from PIL import Image
-            tile_path = TILES_DIR / selected_tile
+            tile_path = Path(tile_dir) / selected_tile
             label_path = labels_dir / f"{tile_path.stem}.txt" if labels_dir else None
 
             if label_path and label_path.exists():
