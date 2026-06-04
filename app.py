@@ -27,6 +27,7 @@ COORDS_CSV = WORKDIR / "tile_coords.csv"
 RUNS_DIR = WORKDIR / "runs"
 LOCKS_DIR = WORKDIR / "locks"
 INFERENCE_LOCK_FILE = LOCKS_DIR / "inference.lock"
+BOOTSTRAP_LOCK_FILE = LOCKS_DIR / "bootstrap.lock"
 DEFAULT_ORTHO = APP_ROOT / "ortofoto" / "ortofoto_exemplo1_corte.tif"
 DEFAULT_WEIGHTS = WORKDIR / "model_weights.pt"
 DEFAULT_NETFLORA_ZIP = "https://github.com/NetFlora/Netflora/archive/refs/heads/main.zip"
@@ -63,6 +64,8 @@ def acquire_inference_lock(
     wait_timeout: int = 1800,
     stale_seconds: int = 7200,
     poll_seconds: float = 1.0,
+    waiting_message: str = "Outro usuário está executando detecção agora. Sua execução está em fila e iniciará automaticamente.",
+    timeout_message: str = "Tempo de espera excedido na fila de inferência. Tente novamente em instantes.",
 ) -> Iterator[None]:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock_fd = None
@@ -86,10 +89,10 @@ def acquire_inference_lock(
                 continue
 
             if time.time() >= deadline:
-                raise TimeoutError("Tempo de espera excedido na fila de inferência. Tente novamente em instantes.")
+                raise TimeoutError(timeout_message)
 
             if not waiting_note_shown:
-                st.info("Outro usuário está executando detecção agora. Sua execução está em fila e iniciará automaticamente.")
+                st.info(waiting_message)
                 waiting_note_shown = True
             time.sleep(poll_seconds)
 
@@ -653,9 +656,15 @@ if run_pipeline and ortho_path is not None:
     with st.status(t["pipeline_status"], expanded=True) as status:
         _progress = st.progress(0)
 
-        st.write(t["step_prep_netflora"])
         try:
-            netflora_root = fn["ensure_netflora_repo"](NETFLORA_DIR, netflora_zip_url)
+            with acquire_inference_lock(
+                BOOTSTRAP_LOCK_FILE,
+                wait_timeout=1800,
+                waiting_message="Outro usuário está preparando o ambiente inicial. Sua execução está em fila e iniciará automaticamente.",
+                timeout_message="Tempo de espera excedido ao preparar o ambiente. Tente novamente em instantes.",
+            ):
+                st.write(t["step_prep_netflora"])
+                netflora_root = fn["ensure_netflora_repo"](NETFLORA_DIR, netflora_zip_url)
         except Exception as e:
             status.update(label=t["step_prep_netflora_err"], state="error")
             st.error(str(e))
@@ -665,41 +674,48 @@ if run_pipeline and ortho_path is not None:
         # Use local groups.json (committed to git) as primary; fall back to downloaded copy
         groups_json = GROUPS_JSON if GROUPS_JSON.exists() else netflora_root / "json" / "groups.json"
 
-        st.write(t["step_check_weights"])
         try:
-            weights_file = fn["ensure_weights_file"](DEFAULT_WEIGHTS, weights_url)
+            with acquire_inference_lock(
+                BOOTSTRAP_LOCK_FILE,
+                wait_timeout=1800,
+                waiting_message="Outro usuário está preparando o ambiente inicial. Sua execução está em fila e iniciará automaticamente.",
+                timeout_message="Tempo de espera excedido ao preparar o ambiente. Tente novamente em instantes.",
+            ):
+                st.write(t["step_check_weights"])
+                weights_file = fn["ensure_weights_file"](DEFAULT_WEIGHTS, weights_url)
         except Exception as e:
             status.update(label=t["step_check_weights_err"], state="error")
             st.error(str(e))
             st.stop()
         _progress.progress(2 / 6)
 
-        st.write(t["step_gen_tiles"])
         try:
-            tile_count = fn["generate_tiles"](
-                ortho_path=ortho_path,
-                output_dir=run_tiles_dir,
-                coords_csv=run_coords_csv,
-                tile_size=tile_size,
-                overlap=overlap,
-                max_tiles=int(max_tiles),
-            )
-        except Exception as e:
-            status.update(label=t["step_gen_tiles_err"], state="error")
-            st.error(str(e))
-            st.stop()
-        _progress.progress(3 / 6)
+            with acquire_inference_lock(
+                INFERENCE_LOCK_FILE,
+                wait_timeout=1800,
+                waiting_message="Outro usuário está processando uma ortofoto. Sua execução está em fila e iniciará automaticamente.",
+                timeout_message="Tempo de espera excedido na fila de processamento. Tente novamente em instantes.",
+            ):
+                st.write(t["step_gen_tiles"])
+                tile_count = fn["generate_tiles"](
+                    ortho_path=ortho_path,
+                    output_dir=run_tiles_dir,
+                    coords_csv=run_coords_csv,
+                    tile_size=tile_size,
+                    overlap=overlap,
+                    max_tiles=int(max_tiles),
+                )
 
-        if tile_count == 0:
-            status.update(label=t["step_no_tiles_err"], state="error")
-            st.error(t["step_no_tiles_msg"])
-            st.stop()
+                _progress.progress(3 / 6)
 
-        st.write(t["step_gen_tiles_done"].format(count=tile_count))
+                if tile_count == 0:
+                    status.update(label=t["step_no_tiles_err"], state="error")
+                    st.error(t["step_no_tiles_msg"])
+                    st.stop()
 
-        st.write(t["step_run_detect"])
-        try:
-            with acquire_inference_lock(INFERENCE_LOCK_FILE):
+                st.write(t["step_gen_tiles_done"].format(count=tile_count))
+
+                st.write(t["step_run_detect"])
                 detect_result = fn["run_netflora_detect"](
                     config=fn["DetectionConfig"](
                         repo_root=netflora_root,
@@ -712,38 +728,38 @@ if run_pipeline and ortho_path is not None:
                         run_name=run_name,
                     )
                 )
-        except TimeoutError as e:
-            status.update(label=t["step_detect_err"], state="error")
+                _progress.progress(4 / 6)
+
+                if detect_result.returncode != 0:
+                    status.update(label=t["step_detect_err"], state="error")
+                    st.error(t["step_detect_err_msg"])
+                    with st.expander(t["step_error_log"]):
+                        st.code(detect_result.stderr or detect_result.stdout)
+                    st.stop()
+
+                labels_dir = run_project_dir / run_name / "labels"
+
+                st.write(t["step_process_results"])
+                class_name_map = fn["get_class_name_map"](groups_json, algorithm)
+                results_df = fn["build_detection_table"](
+                    labels_dir=labels_dir,
+                    coords_csv=run_coords_csv,
+                    class_name_map=class_name_map,
+                )
+                polygons_df = fn["build_detection_polygons_wgs84"](results_df, run_coords_csv)
+                _progress.progress(5 / 6)
+
+                st.write(t["step_gen_map"])
+                # Build the folium Map object for display, then render HTML to disk for export.
+                # Storing map_obj (not the rendered HTML string) in session state keeps memory low.
+                map_obj = fn["build_map"](polygons_df, ortho_path)
+                map_html_path = run_workspace / "map.html"
+                map_html_path.write_text(fn["render_map_html"](map_obj), encoding="utf-8")
+                _progress.progress(6 / 6)
+        except Exception as e:
+            status.update(label=t["step_gen_tiles_err"], state="error")
             st.error(str(e))
             st.stop()
-        _progress.progress(4 / 6)
-
-        if detect_result.returncode != 0:
-            status.update(label=t["step_detect_err"], state="error")
-            st.error(t["step_detect_err_msg"])
-            with st.expander(t["step_error_log"]):
-                st.code(detect_result.stderr or detect_result.stdout)
-            st.stop()
-
-        labels_dir = run_project_dir / run_name / "labels"
-
-        st.write(t["step_process_results"])
-        class_name_map = fn["get_class_name_map"](groups_json, algorithm)
-        results_df = fn["build_detection_table"](
-            labels_dir=labels_dir,
-            coords_csv=run_coords_csv,
-            class_name_map=class_name_map,
-        )
-        polygons_df = fn["build_detection_polygons_wgs84"](results_df, run_coords_csv)
-        _progress.progress(5 / 6)
-
-        st.write(t["step_gen_map"])
-        # Build the folium Map object for display, then render HTML to disk for export.
-        # Storing map_obj (not the rendered HTML string) in session state keeps memory low.
-        map_obj = fn["build_map"](polygons_df, ortho_path)
-        map_html_path = run_workspace / "map.html"
-        map_html_path.write_text(fn["render_map_html"](map_obj), encoding="utf-8")
-        _progress.progress(6 / 6)
 
         st.session_state.last_run = {
             "run_name": run_name,
