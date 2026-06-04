@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Netflora Online | Apresentacao</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <span class="eyebrow">Netflora Online</span>
+        <h1>Deteccao inteligente de especies em ortofotos</h1>
+        <p>
+          Uma apresentacao objetiva do projeto e da demo tecnica para inventario
+          florestal com apoio de inteligencia artificial.
+        </p>
+        <div class="cta-row">
+          <a class="button" href="https://netflora-online-teste.streamlit.app" target="_blank" rel="noreferrer">
+            Abrir demo Streamlit
+          </a>
+          <a class="button outline" href="../index.html">Trocar idioma</a>
+        </div>
+        <p class="note">
+          O Streamlit pode levar alguns minutos para carregar e executar a analise da ortofoto.
+        </p>
+      </header>
+
+      <section class="section card">
+        <h2>Proposta</h2>
+        <p>
+          Automatizar a identificacao de especies vegetais em ortofotos de alta resolucao,
+          gerando mapas e tabelas para apoiar inventarios florestais e tomada de decisao.
+        </p>
+      </section>
+
+      <section class="section grid">
+        <div class="card-item">
+          <h3>Contexto do problema</h3>
+          <p>
+            Processos manuais de contagem e classificacao em grandes areas sao lentos,
+            custosos e sujeitos a variacoes operacionais.
+          </p>
+        </div>
+        <div class="card-item">
+          <h3>Solucao resumida</h3>
+          <p>
+            Um pipeline de tiles, deteccao por YOLO e georreferenciamento para gerar
+            resultados estruturados e visualizacao em mapa.
+          </p>
+        </div>
+        <div class="card-item">
+          <h3>Saidas principais</h3>
+          <p>
+            CSV de deteccoes, mapa interativo e opcionalmente shapefile para uso em GIS.
+          </p>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Destaques tecnicos</h2>
+        <ul class="list">
+          <li>Deteccao baseada em YOLO com modelos treinados para especies alvo.</li>
+          <li>Recorte da ortofoto em tiles com sobreposicao controlada.</li>
+          <li>Conversao de coordenadas para gerar poligonos em WGS84.</li>
+          <li>Mapa interativo com overlay da ortofoto e marcadores de deteccao.</li>
+          <li>Exportacao simplificada para CSV e pacote de resultados.</li>
+        </ul>
+      </section>
+
+      <section class="section card">
+        <h2>IA, visao computacional e geoprocessamento</h2>
+        <p>
+          O fluxo combina processamento de imagem, inferencia por redes neurais e
+          transformacoes espaciais para entregar indicadores e mapas prontos para analise.
+        </p>
+      </section>
+
+      <section class="section card">
+        <h2>Imagens e screenshots</h2>
+        <div class="image-grid">
+          <div class="image-placeholder">assets/ortho-preview.jpg</div>
+          <div class="image-placeholder">assets/map-preview.jpg</div>
+          <div class="image-placeholder">assets/detections.jpg</div>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Executar localmente</h2>
+        <div class="code-block">
+<pre><code>git clone https://github.com/MatheusFLB/netflora-online-teste.git
+cd netflora-online-teste
+python -m venv .venv
+pip install -r requirements.txt
+streamlit run app.py</code></pre>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Repositorio</h2>
+        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
+          github.com/MatheusFLB/netflora-online-teste
+        </a>
+      </section>
+
+      <footer class="footer">
+        <span>Contato: https://www.embrapa.br/acre/</span>
+        <a class="link" href="https://www.embrapa.br/acre/netflora" target="_blank" rel="noreferrer">
+          Site oficial do projeto
+        </a>
+      </footer>
+    </div>
+  </body>
+</html>

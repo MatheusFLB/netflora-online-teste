@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Netflora Online | Overview</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <span class="eyebrow">Netflora Online</span>
+        <h1>Smart species detection on orthophotos</h1>
+        <p>
+          A concise overview of the project and the technical demo for forest inventory
+          with artificial intelligence support.
+        </p>
+        <div class="cta-row">
+          <a class="button" href="https://netflora-online-teste.streamlit.app" target="_blank" rel="noreferrer">
+            Open Streamlit demo
+          </a>
+          <a class="button outline" href="../index.html">Switch language</a>
+        </div>
+        <p class="note">
+          The Streamlit demo may take a few minutes to load and process the orthophoto.
+        </p>
+      </header>
+
+      <section class="section card">
+        <h2>Project goal</h2>
+        <p>
+          Automate the identification of vegetation species on high-resolution orthophotos,
+          producing maps and tables to support forest inventories and decision making.
+        </p>
+      </section>
+
+      <section class="section grid">
+        <div class="card-item">
+          <h3>Problem context</h3>
+          <p>
+            Manual counting and classification across large areas is slow, expensive,
+            and subject to operational inconsistencies.
+          </p>
+        </div>
+        <div class="card-item">
+          <h3>Condensed solution</h3>
+          <p>
+            A tiling pipeline with YOLO-based detection and georeferencing to deliver
+            structured results and map visualization.
+          </p>
+        </div>
+        <div class="card-item">
+          <h3>Main outputs</h3>
+          <p>
+            Detection CSV, interactive map, and optional shapefile for GIS workflows.
+          </p>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Technical highlights</h2>
+        <ul class="list">
+          <li>YOLO detection models tailored for target species.</li>
+          <li>Orthophoto tiling with controlled overlap.</li>
+          <li>Coordinate conversion to build WGS84 polygons.</li>
+          <li>Interactive map with orthophoto overlay and detections.</li>
+          <li>Simple export to CSV and result package.</li>
+        </ul>
+      </section>
+
+      <section class="section card">
+        <h2>AI, computer vision, and geoprocessing</h2>
+        <p>
+          The flow combines image processing, neural inference, and spatial transforms
+          to deliver indicators and maps ready for analysis.
+        </p>
+      </section>
+
+      <section class="section card">
+        <h2>Images and screenshots</h2>
+        <div class="image-grid">
+          <div class="image-placeholder">assets/ortho-preview.jpg</div>
+          <div class="image-placeholder">assets/map-preview.jpg</div>
+          <div class="image-placeholder">assets/detections.jpg</div>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Run locally</h2>
+        <div class="code-block">
+<pre><code>git clone https://github.com/MatheusFLB/netflora-online-teste.git
+cd netflora-online-teste
+python -m venv .venv
+pip install -r requirements.txt
+streamlit run app.py</code></pre>
+        </div>
+      </section>
+
+      <section class="section card">
+        <h2>Repository</h2>
+        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
+          github.com/MatheusFLB/netflora-online-teste
+        </a>
+      </section>
+
+      <footer class="footer">
+        <span>Contact: https://www.embrapa.br/acre/</span>
+        <a class="link" href="https://www.embrapa.br/acre/netflora" target="_blank" rel="noreferrer">
+          Official project site
+        </a>
+      </footer>
+    </div>
+  </body>
+</html>
