@@ -96,41 +96,47 @@
       <section class="section card">
         <h2>Executar localmente</h2>
         <p>
-          Fluxo local em Python (comandos validados), baseado na adaptacao do projeto
+          Fluxo local em Python (sequencia de comandos), baseado na adaptacao do projeto
           original para execucao fora do Google Colab.
         </p>
         <div class="code-block">
-<pre><code>preparar ambiente python
+<pre><code>🌐 clonar repositorio
+git clone https://github.com/MatheusFLB/netflora-online-teste.git
+cd netflora-online-teste
+
+🐍 preparar ambiente python
 python -m venv .venv
 .\.venv\Scripts\activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+pip install -r workdir\netflora_src\requirements.txt
 
-entrar na pasta do fluxo local adaptado
+📁 entrar na pasta do fluxo local adaptado
 cd workdir\netflora_src
 
-gerar o tiles, imagens cortadas para facilitar a analise
+🧩 gerar os tiles (imagens cortadas para facilitar a analise)
 python -c "from tiles import TileGenerator; TileGenerator()"
 
-detectar plantas nos tiles
+🔎 detectar plantas nos tiles
 python detect.py --device 0 --weights model_weights.pt --img 1536
 
-threshold de confianca de deteccao
+🎯 aplicar threshold de confianca de deteccao
 python -c "from utils.batch_detection import runBatchDetection; runBatchDetection(device='cpu', img_size=1536, source_path='processing/selected_images', weights_path='model_weights.pt', save_txt=True)"
 python -c "from utils.thresh_display import ImageDisplayer; ImageDisplayer()"
 
-processar resultados
+📊 processar resultados
 python results.py --graphics --conf 0.25
 
-exibir imagem de resumo (no terminal pode nao renderizar; o arquivo fica salvo em results)
+🖼️ exibir imagem de resumo (no terminal pode nao renderizar; o arquivo fica salvo em results)
 python -c "from results import showResults; showResults()"
 
-criar mapa e salvar em HTML
+🗺️ criar mapa e salvar em HTML
 python -c "from utils.map_utils import createMap; m=createMap(); m.save('results/mapa.html')"
 
-abrir o mapa no navegador (Windows)
+🌍 abrir o mapa no navegador (Windows)
 start results\mapa.html
 
-gerar zip dos resultados
+📦 gerar zip dos resultados
 python -c "from results import downloadResults; downloadResults()"</code></pre>
         </div>
       </section>

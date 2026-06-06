@@ -27,7 +27,7 @@
         <p class="note">
           The Streamlit demo may take many minutes to load and process the orthophoto.<br>
           If Streamlit has issues running the application, please
-          <a class="link" href="https://www.linkedin.com/in/matheusbissoli/" target="_blank" rel="noreferrer">contato com o desenvolvedor</a>
+          <a class="link" href="https://www.linkedin.com/in/matheusbissoli/" target="_blank" rel="noreferrer">contact the developer</a>
           for help.
         </p>
       </header>
@@ -94,41 +94,47 @@
       <section class="section card">
         <h2>Run locally</h2>
         <p>
-          Local Python workflow (validated commands), adapted from the original
+          Local Python workflow (command sequence), adapted from the original
           Google Colab-oriented project to local execution.
         </p>
         <div class="code-block">
-<pre><code>prepare python environment
+<pre><code>🌐 clone repository
+git clone https://github.com/MatheusFLB/netflora-online-teste.git
+cd netflora-online-teste
+
+🐍 prepare python environment
 python -m venv .venv
 .\.venv\Scripts\activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+pip install -r workdir\netflora_src\requirements.txt
 
-enter the adapted local workflow folder
+📁 enter the adapted local workflow folder
 cd workdir\netflora_src
 
-generate tiles (cropped images for easier analysis)
+🧩 generate tiles (cropped images for easier analysis)
 python -c "from tiles import TileGenerator; TileGenerator()"
 
-detect plants on tiles
+🔎 detect plants on tiles
 python detect.py --device 0 --weights model_weights.pt --img 1536
 
-detection confidence threshold workflow
+🎯 run confidence-threshold workflow
 python -c "from utils.batch_detection import runBatchDetection; runBatchDetection(device='cpu', img_size=1536, source_path='processing/selected_images', weights_path='model_weights.pt', save_txt=True)"
 python -c "from utils.thresh_display import ImageDisplayer; ImageDisplayer()"
 
-process results
+📊 process results
 python results.py --graphics --conf 0.25
 
-show summary image (terminal may not render; output file is saved in results)
+🖼️ show summary image (terminal may not render; output file is saved in results)
 python -c "from results import showResults; showResults()"
 
-create map and save as HTML
+🗺️ create map and save as HTML
 python -c "from utils.map_utils import createMap; m=createMap(); m.save('results/mapa.html')"
 
-open map in browser (Windows)
+🌍 open map in browser (Windows)
 start results\mapa.html
 
-generate results zip
+📦 generate results zip
 python -c "from results import downloadResults; downloadResults()"</code></pre>
         </div>
       </section>
