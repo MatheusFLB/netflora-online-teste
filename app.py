@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import datetime as dt
+import gc
+import os
+import time
 import unicodedata
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional
 
 import streamlit as st
 
@@ -12,21 +17,26 @@ import pipeline
 ROOT = Path(__file__).parent
 WORKDIR = ROOT / "workdir"
 NETFLORA_DIR = WORKDIR / "netflora_src"
-WEIGHTS_PATH = WORKDIR / "model_weights.pt"
+WEIGHTS_DIR = WORKDIR / "weights"
 GROUPS_JSON = ROOT / "json" / "groups.json"
 ORTO_DIR = ROOT / "ortofoto"
-RUNS_DIR = WORKDIR / "local_runs"
+RUNS_DIR = WORKDIR / "sessions"
+LOCKS_DIR = WORKDIR / "locks"
+INFERENCE_LOCK_FILE = LOCKS_DIR / "inference.lock"
+BOOTSTRAP_LOCK_FILE = LOCKS_DIR / "bootstrap.lock"
 NETFLORA_ZIP_URL = "https://github.com/NetFlora/Netflora/archive/refs/heads/main.zip"
 DEFAULT_ALGORITHM = "Palmeiras"
 DEFAULT_WEIGHTS_URL = "https://github.com/NetFlora/Netflora/releases/download/Assets/PALMEIRAS_Embrapa00.pt"
+CLI_SESSION_ID = f"cli_{uuid.uuid4().hex[:8]}"
 
-# Matches historical Streamlit-online behavior: when no local weight file exists,
-# use a known release URL automatically so first cloud run does not fail.
 ALGORITHM_WEIGHTS_URLS = {
     "acai": "https://github.com/NetFlora/Netflora/releases/download/Assets/ACAI_Embrapa00.pt",
     "palmeiras": "https://github.com/NetFlora/Netflora/releases/download/Assets/PALMEIRAS_Embrapa00.pt",
     "pmfs": "https://github.com/NetFlora/Netflora/releases/download/Assets/PMFS_Embrapa00.pt",
     "pfnms": "https://github.com/NetFlora/Netflora/releases/download/Assets/NM_Embrapa00.pt",
+    "castanheira": None,
+    "ecologico": None,
+    "ambiental": None,
 }
 
 
@@ -35,17 +45,101 @@ def load_algorithms() -> List[str]:
     return pipeline.get_available_algorithms(GROUPS_JSON)
 
 
-@st.cache_data
 def list_local_orthophotos() -> List[Path]:
     if not ORTO_DIR.exists():
         return []
 
     tif_files = [
         p
-        for p in ORTO_DIR.iterdir()
+        for p in ORTO_DIR.rglob("*")
         if p.is_file() and p.suffix.lower() in {".tif", ".tiff"}
     ]
-    return sorted(tif_files, key=lambda p: p.name.lower())
+    return sorted(
+        tif_files,
+        key=lambda p: str(p.relative_to(ORTO_DIR)).replace("\\", "/").casefold(),
+    )
+
+
+def get_local_ortho_label(path: Path) -> str:
+    return str(path.relative_to(ORTO_DIR)).replace("\\", "/")
+
+
+def sanitize_filename(filename: str) -> str:
+    safe = "".join(ch for ch in Path(filename).name if ch.isalnum() or ch in ("-", "_", "."))
+    return safe.strip("._") or "upload.tif"
+
+
+def get_session_id() -> str:
+    try:
+        if "session_id" not in st.session_state:
+            st.session_state["session_id"] = uuid.uuid4().hex
+        return str(st.session_state["session_id"])
+    except Exception:
+        return CLI_SESSION_ID
+
+
+def get_session_root() -> Path:
+    session_root = RUNS_DIR / get_session_id()
+    session_root.mkdir(parents=True, exist_ok=True)
+    return session_root
+
+
+@contextmanager
+def acquire_execution_lock(
+    lock_path: Path,
+    wait_timeout: int = 1800,
+    stale_seconds: int = 7200,
+    poll_seconds: float = 1.0,
+    waiting_message: str = (
+        "Outro usuario esta processando agora. Sua execucao entrou na fila e "
+        "iniciara automaticamente."
+    ),
+    timeout_message: str = (
+        "Tempo de espera excedido na fila de processamento. "
+        "Tente novamente em instantes."
+    ),
+) -> Iterator[None]:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd: Optional[int] = None
+    deadline = time.time() + wait_timeout
+    waiting_note_shown = False
+
+    while True:
+        try:
+            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            owner = f"session={get_session_id()} pid={os.getpid()} ts={int(time.time())}"
+            os.write(lock_fd, owner.encode("utf-8"))
+            os.close(lock_fd)
+            lock_fd = None
+            break
+        except FileExistsError:
+            try:
+                if time.time() - lock_path.stat().st_mtime > stale_seconds:
+                    lock_path.unlink(missing_ok=True)
+                    continue
+            except FileNotFoundError:
+                continue
+
+            if time.time() >= deadline:
+                raise TimeoutError(timeout_message)
+
+            if not waiting_note_shown:
+                try:
+                    st.info(waiting_message)
+                except Exception:
+                    pass
+                waiting_note_shown = True
+            time.sleep(poll_seconds)
+
+    try:
+        yield
+    finally:
+        if lock_fd is not None:
+            try:
+                os.close(lock_fd)
+            except OSError:
+                pass
+        lock_path.unlink(missing_ok=True)
 
 
 def get_default_algorithm_index(algorithms: List[str]) -> int:
@@ -64,9 +158,16 @@ def normalize_algorithm_name(name: str) -> str:
     return ascii_name.strip().casefold()
 
 
-def get_default_weights_url(algorithm: str) -> str:
+def get_default_weights_url(algorithm: str) -> Optional[str]:
     key = normalize_algorithm_name(algorithm)
     return ALGORITHM_WEIGHTS_URLS.get(key, DEFAULT_WEIGHTS_URL)
+
+
+def get_weights_target_path(algorithm: str) -> Path:
+    key = normalize_algorithm_name(algorithm)
+    safe_key = "".join(ch if ch.isalnum() else "_" for ch in key).strip("_") or "default"
+    WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+    return WEIGHTS_DIR / f"{safe_key}_model_weights.pt"
 
 
 def save_upload(upload: st.runtime.uploaded_file_manager.UploadedFile, target: Path) -> Path:
@@ -77,7 +178,8 @@ def save_upload(upload: st.runtime.uploaded_file_manager.UploadedFile, target: P
 
 
 def build_run_id() -> str:
-    return dt.datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    ts = dt.datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
+    return f"{ts}_{uuid.uuid4().hex[:8]}"
 
 
 def resolve_orthophoto(
@@ -94,10 +196,15 @@ def resolve_orthophoto(
                 "No local orthophoto was found in ortofoto/."
             )
 
+        local_lookup = {get_local_ortho_label(file_path): file_path for file_path in local_files}
         if local_choice:
-            for file_path in local_files:
-                if file_path.name == local_choice:
-                    return file_path
+            selected_path = local_lookup.get(local_choice)
+            if selected_path is not None:
+                return selected_path
+            raise FileNotFoundError(
+                "A ortofoto local selecionada nao foi encontrada. "
+                "Selected local orthophoto was not found."
+            )
 
         return local_files[0]
 
@@ -107,7 +214,11 @@ def resolve_orthophoto(
                 "Envie um arquivo .tif/.tiff. "
                 "Please upload a .tif/.tiff file."
             )
-        return save_upload(upload, ORTO_DIR / upload.name)
+
+        safe_name = sanitize_filename(upload.name)
+        unique_name = f"{dt.datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}_{safe_name}"
+        target_path = get_session_root() / "inputs" / unique_name
+        return save_upload(upload, target_path)
 
     if not ortho_url.strip():
         raise ValueError(
@@ -115,7 +226,8 @@ def resolve_orthophoto(
             "Please provide a valid orthophoto URL."
         )
 
-    return pipeline.ensure_ortho_file(None, ortho_url.strip(), ORTO_DIR / "ortofoto_download.tif")
+    target_path = get_session_root() / "inputs" / "ortofoto_download.tif"
+    return pipeline.ensure_ortho_file(None, ortho_url.strip(), target_path)
 
 
 def run_detection(
@@ -127,55 +239,111 @@ def run_detection(
     max_tiles: int,
     img_size: int,
     weights_url: str,
+    step_callback: Optional[Callable[[str], None]] = None,
 ) -> Dict[str, object]:
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
-    pipeline.ensure_netflora_repo(NETFLORA_DIR, NETFLORA_ZIP_URL)
-    resolved_weights_url = (weights_url or "").strip() or get_default_weights_url(algorithm)
-    weights_path = pipeline.ensure_weights_file(WEIGHTS_PATH, resolved_weights_url)
+    def step(message: str) -> None:
+        if step_callback is not None:
+            step_callback(message)
+
+    step("1/6 Preparando repositorio Netflora... / Preparing Netflora repository...")
+    with acquire_execution_lock(
+        BOOTSTRAP_LOCK_FILE,
+        waiting_message=(
+            "Outro usuario esta preparando o ambiente inicial. Sua execucao entrou na fila. "
+            "Another user is preparing the environment. Your run was queued."
+        ),
+        timeout_message=(
+            "Tempo de espera excedido para preparar ambiente. "
+            "Preparation queue timeout exceeded."
+        ),
+    ):
+        pipeline.ensure_netflora_repo(NETFLORA_DIR, NETFLORA_ZIP_URL)
+
+    weights_path_target = get_weights_target_path(algorithm)
+    default_weights_url = get_default_weights_url(algorithm)
+    resolved_weights_url = (weights_url or "").strip() or (default_weights_url or "")
+    if not resolved_weights_url and not weights_path_target.exists():
+        raise FileNotFoundError(
+            "Nao existe URL padrao de pesos para este algoritmo e nenhum arquivo local foi encontrado. "
+            "There is no default weights URL for this algorithm and no local weights file was found."
+        )
+
+    step("2/6 Verificando pesos do modelo... / Checking model weights...")
+    with acquire_execution_lock(
+        BOOTSTRAP_LOCK_FILE,
+        waiting_message=(
+            "Outro usuario esta preparando pesos do modelo. Sua execucao entrou na fila. "
+            "Another user is preparing model weights. Your run was queued."
+        ),
+        timeout_message=(
+            "Tempo de espera excedido para preparar pesos. "
+            "Weights preparation queue timeout exceeded."
+        ),
+    ):
+        weights_path = pipeline.ensure_weights_file(
+            weights_path_target,
+            resolved_weights_url or None,
+        )
 
     run_id = build_run_id()
-    run_dir = RUNS_DIR / run_id
+    run_dir = get_session_root() / "runs" / run_id
     tiles_dir = run_dir / "tiles"
     coords_csv = run_dir / "tile_coords.csv"
     project_dir = run_dir / "detections"
 
-    tile_count = pipeline.generate_tiles(
-        ortho_path=ortho_path,
-        output_dir=tiles_dir,
-        coords_csv=coords_csv,
-        tile_size=tile_size,
-        overlap=overlap,
-        max_tiles=max_tiles,
-    )
+    with acquire_execution_lock(
+        INFERENCE_LOCK_FILE,
+        waiting_message=(
+            "Outro usuario esta processando uma ortofoto. Sua execucao entrou na fila e iniciara automaticamente. "
+            "Another user is processing an orthophoto. Your run was queued and will start automatically."
+        ),
+        timeout_message=(
+            "Tempo de espera excedido na fila de processamento. "
+            "Processing queue timeout exceeded."
+        ),
+    ):
+        step("3/6 Gerando tiles da ortofoto... / Generating orthophoto tiles...")
+        tile_count = pipeline.generate_tiles(
+            ortho_path=ortho_path,
+            output_dir=tiles_dir,
+            coords_csv=coords_csv,
+            tile_size=tile_size,
+            overlap=overlap,
+            max_tiles=max_tiles,
+        )
 
-    if tile_count == 0:
-        raise RuntimeError("Nenhum tile valido foi gerado. Verifique a ortofoto.")
+        if tile_count == 0:
+            raise RuntimeError("Nenhum tile valido foi gerado. Verifique a ortofoto.")
 
-    config = pipeline.DetectionConfig(
-        repo_root=NETFLORA_DIR,
-        weights_path=weights_path,
-        source_dir=tiles_dir,
-        img_size=img_size,
-        conf_thres=conf_thres,
-        device="cpu",
-        project_dir=project_dir,
-        run_name=run_id,
-    )
+        step("4/6 Executando deteccao... / Running detection...")
+        config = pipeline.DetectionConfig(
+            repo_root=NETFLORA_DIR,
+            weights_path=weights_path,
+            source_dir=tiles_dir,
+            img_size=img_size,
+            conf_thres=conf_thres,
+            device="cpu",
+            project_dir=project_dir,
+            run_name=run_id,
+        )
 
-    result = pipeline.run_netflora_detect(config)
+        result = pipeline.run_netflora_detect(config)
 
-    labels_dir = project_dir / run_id / "labels"
-    class_map = pipeline.get_class_name_map(GROUPS_JSON, algorithm)
-    results_df = pipeline.build_detection_table(labels_dir, coords_csv, class_map)
-    polygons_df = pipeline.build_detection_polygons_wgs84(results_df, coords_csv)
+        step("5/6 Processando resultados... / Processing results...")
+        labels_dir = project_dir / run_id / "labels"
+        class_map = pipeline.get_class_name_map(GROUPS_JSON, algorithm)
+        results_df = pipeline.build_detection_table(labels_dir, coords_csv, class_map)
+        polygons_df = pipeline.build_detection_polygons_wgs84(results_df, coords_csv)
 
-    map_obj = pipeline.build_map(polygons_df, ortho_path)
-    map_html = pipeline.render_map_html(map_obj)
-    zip_bytes = pipeline.export_results_zip(
-        {"results_df": results_df, "polygons_df": polygons_df},
-        map_html,
-    )
+        step("6/6 Gerando mapa e exportacao... / Building map and exports...")
+        map_obj = pipeline.build_map(polygons_df, ortho_path)
+        map_html = pipeline.render_map_html(map_obj)
+        zip_bytes = pipeline.export_results_zip(
+            {"results_df": results_df, "polygons_df": polygons_df},
+            map_html,
+        )
 
     return {
         "run_id": run_id,
@@ -202,6 +370,8 @@ def main() -> None:
 
     if "show_tiles" not in st.session_state:
         st.session_state["show_tiles"] = False
+    if "run_data" not in st.session_state:
+        st.session_state["run_data"] = None
 
     st.markdown(
         """
@@ -253,7 +423,7 @@ def main() -> None:
 
     algorithms = load_algorithms()
     local_orthos = list_local_orthophotos()
-    local_ortho_names = [path.name for path in local_orthos]
+    local_ortho_names = [get_local_ortho_label(path) for path in local_orthos]
 
     if not algorithms:
         st.error(
@@ -268,6 +438,11 @@ def main() -> None:
         "upload": "Upload de arquivo / File upload",
         "url": "URL da ortofoto / Orthophoto URL",
     }
+
+    btn_refresh_col, _ = st.columns([2, 6])
+    with btn_refresh_col:
+        if st.button("Atualizar ortofotos locais / Refresh local orthophotos", use_container_width=True):
+            st.rerun()
 
     with st.form("run_form"):
         algorithm = st.selectbox(
@@ -323,14 +498,23 @@ def main() -> None:
             with col2:
                 img_size = st.number_input("Tamanho de inferencia (px) / Inference size (px)", 320, 2048, 1536, step=64)
                 conf_thres = st.slider("Confianca minima / Min confidence", 0.05, 0.70, 0.25, 0.01)
+
+                default_weights_url = get_default_weights_url(algorithm) or ""
                 weights_url = st.text_input(
                     "URL opcional dos pesos / Optional weights URL",
-                    value=get_default_weights_url(algorithm),
+                    value=default_weights_url,
+                    key=f"weights_url_{normalize_algorithm_name(algorithm)}",
                     help=(
                         "Se vazio, usa automaticamente a URL padrao do algoritmo. "
-                        "If empty, the algorithm default weights URL is used automatically."
+                        "If empty, the algorithm default weights URL is used automatically when available."
                     ),
                 )
+
+                if not default_weights_url:
+                    st.info(
+                        "Este algoritmo nao possui URL padrao de pesos. "
+                        "Informe manualmente uma URL de .pt ou deixe um arquivo local pronto em workdir/weights/."
+                    )
 
         btn_left, btn_center, btn_right = st.columns([1, 2, 1])
         with btn_center:
@@ -344,6 +528,9 @@ def main() -> None:
             )
         else:
             try:
+                st.session_state["run_data"] = None
+                gc.collect()
+
                 ortho_path = resolve_orthophoto(
                     source_mode=source_mode,
                     local_files=local_orthos,
@@ -352,7 +539,10 @@ def main() -> None:
                     ortho_url=ortho_url,
                 )
 
-                with st.spinner("Processando. Isso pode levar alguns minutos... / Processing. This can take a few minutes..."):
+                with st.status(
+                    "Executando pipeline de deteccao... / Running detection pipeline...",
+                    expanded=True,
+                ) as status:
                     run_data = run_detection(
                         algorithm=algorithm,
                         ortho_path=ortho_path,
@@ -362,6 +552,15 @@ def main() -> None:
                         max_tiles=max_tiles,
                         img_size=img_size,
                         weights_url=weights_url,
+                        step_callback=st.write,
+                    )
+                    status.update(
+                        label=(
+                            "Pipeline concluido com avisos. / Pipeline completed with warnings."
+                            if run_data.get("returncode", 0) != 0
+                            else "Pipeline concluido com sucesso. / Pipeline completed successfully."
+                        ),
+                        state="complete",
                     )
 
                 st.session_state["run_data"] = run_data
