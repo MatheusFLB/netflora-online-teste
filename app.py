@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -17,6 +18,16 @@ ORTO_DIR = ROOT / "ortofoto"
 RUNS_DIR = WORKDIR / "local_runs"
 NETFLORA_ZIP_URL = "https://github.com/NetFlora/Netflora/archive/refs/heads/main.zip"
 DEFAULT_ALGORITHM = "Palmeiras"
+DEFAULT_WEIGHTS_URL = "https://github.com/NetFlora/Netflora/releases/download/Assets/PALMEIRAS_Embrapa00.pt"
+
+# Matches historical Streamlit-online behavior: when no local weight file exists,
+# use a known release URL automatically so first cloud run does not fail.
+ALGORITHM_WEIGHTS_URLS = {
+    "acai": "https://github.com/NetFlora/Netflora/releases/download/Assets/ACAI_Embrapa00.pt",
+    "palmeiras": "https://github.com/NetFlora/Netflora/releases/download/Assets/PALMEIRAS_Embrapa00.pt",
+    "pmfs": "https://github.com/NetFlora/Netflora/releases/download/Assets/PMFS_Embrapa00.pt",
+    "pfnms": "https://github.com/NetFlora/Netflora/releases/download/Assets/NM_Embrapa00.pt",
+}
 
 
 @st.cache_data
@@ -45,6 +56,17 @@ def get_default_algorithm_index(algorithms: List[str]) -> int:
         if name.casefold() == DEFAULT_ALGORITHM.casefold():
             return index
     return 0
+
+
+def normalize_algorithm_name(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+    return ascii_name.strip().casefold()
+
+
+def get_default_weights_url(algorithm: str) -> str:
+    key = normalize_algorithm_name(algorithm)
+    return ALGORITHM_WEIGHTS_URLS.get(key, DEFAULT_WEIGHTS_URL)
 
 
 def save_upload(upload: st.runtime.uploaded_file_manager.UploadedFile, target: Path) -> Path:
@@ -109,7 +131,8 @@ def run_detection(
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
     pipeline.ensure_netflora_repo(NETFLORA_DIR, NETFLORA_ZIP_URL)
-    weights_path = pipeline.ensure_weights_file(WEIGHTS_PATH, weights_url or None)
+    resolved_weights_url = (weights_url or "").strip() or get_default_weights_url(algorithm)
+    weights_path = pipeline.ensure_weights_file(WEIGHTS_PATH, resolved_weights_url)
 
     run_id = build_run_id()
     run_dir = RUNS_DIR / run_id
@@ -161,6 +184,8 @@ def run_detection(
         "tiles_dir": str(tiles_dir),
         "labels_dir": str(labels_dir),
         "class_map": class_map,
+        "weights_path": str(weights_path),
+        "weights_url_used": resolved_weights_url,
         "tile_count": tile_count,
         "results_df": results_df,
         "polygons_df": polygons_df,
@@ -298,7 +323,14 @@ def main() -> None:
             with col2:
                 img_size = st.number_input("Tamanho de inferencia (px) / Inference size (px)", 320, 2048, 1536, step=64)
                 conf_thres = st.slider("Confianca minima / Min confidence", 0.05, 0.70, 0.25, 0.01)
-                weights_url = st.text_input("URL opcional dos pesos / Optional weights URL", value="")
+                weights_url = st.text_input(
+                    "URL opcional dos pesos / Optional weights URL",
+                    value=get_default_weights_url(algorithm),
+                    help=(
+                        "Se vazio, usa automaticamente a URL padrao do algoritmo. "
+                        "If empty, the algorithm default weights URL is used automatically."
+                    ),
+                )
 
         btn_left, btn_center, btn_right = st.columns([1, 2, 1])
         with btn_center:
