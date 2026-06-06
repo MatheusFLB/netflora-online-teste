@@ -387,12 +387,12 @@ def main() -> None:
         .app-hero h1 {
             margin-bottom: 0;
         }
-        div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button {
+        .stButton > button[kind="primary"] {
             background-color: #c62828;
             border: 1px solid #c62828;
             color: #ffffff;
         }
-        div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] > button:hover {
+        .stButton > button[kind="primary"]:hover {
             background-color: #a61f1f;
             border-color: #a61f1f;
             color: #ffffff;
@@ -439,86 +439,84 @@ def main() -> None:
         "url": "URL da ortofoto / Orthophoto URL",
     }
 
-    btn_refresh_col, _ = st.columns([2, 6])
-    with btn_refresh_col:
-        if st.button("Atualizar ortofotos locais / Refresh local orthophotos", use_container_width=True):
-            st.rerun()
+    algorithm = st.selectbox(
+        "Algoritmo / Algorithm",
+        options=algorithms,
+        index=get_default_algorithm_index(algorithms),
+    )
 
-    with st.form("run_form"):
-        algorithm = st.selectbox(
-            "Algoritmo / Algorithm",
-            options=algorithms,
-            index=get_default_algorithm_index(algorithms),
-        )
+    source_mode = st.radio(
+        "Fonte da ortofoto / Orthophoto source",
+        options=["local", "upload", "url"],
+        format_func=lambda value: source_labels[value],
+        index=0,
+    )
 
-        source_mode = st.radio(
-            "Fonte da ortofoto / Orthophoto source",
-            options=["local", "upload", "url"],
-            format_func=lambda value: source_labels[value],
-            index=0,
-        )
+    local_choice: Optional[str] = None
+    ortho_upload: Optional[st.runtime.uploaded_file_manager.UploadedFile] = None
+    ortho_url = ""
 
-        local_choice: Optional[str] = None
-        ortho_upload: Optional[st.runtime.uploaded_file_manager.UploadedFile] = None
-        ortho_url = ""
-
-        if source_mode == "local":
-            if local_ortho_names:
-                local_choice = st.selectbox(
-                    "Ortofoto local / Local orthophoto",
-                    options=local_ortho_names,
-                    index=0,
-                )
-                st.caption(
-                    "Padrao: ortofoto local do projeto. "
-                    "Default: project local orthophoto."
-                )
-            else:
-                st.warning(
-                    "Nenhuma ortofoto local encontrada em ortofoto/. "
-                    "No local orthophoto found in ortofoto/."
-                )
-        elif source_mode == "upload":
-            ortho_upload = st.file_uploader(
-                "Ortofoto (.tif/.tiff) / Orthophoto (.tif/.tiff)",
-                type=["tif", "tiff"],
+    if source_mode == "local":
+        if local_ortho_names:
+            local_choice = st.selectbox(
+                "Ortofoto local / Local orthophoto",
+                options=local_ortho_names,
+                index=0,
+            )
+            st.caption(
+                "Padrao: ortofoto local do projeto. "
+                "Default: project local orthophoto."
             )
         else:
-            ortho_url = st.text_input(
-                "URL da ortofoto / Orthophoto URL",
-                value="",
+            st.warning(
+                "Nenhuma ortofoto local encontrada em ortofoto/. "
+                "No local orthophoto found in ortofoto/."
+            )
+    elif source_mode == "upload":
+        ortho_upload = st.file_uploader(
+            "Ortofoto (.tif/.tiff) / Orthophoto (.tif/.tiff)",
+            type=["tif", "tiff"],
+        )
+    else:
+        ortho_url = st.text_input(
+            "URL da ortofoto / Orthophoto URL",
+            value="",
+        )
+
+    with st.expander("Ajustes avancados / Advanced settings", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            tile_size = st.number_input("Tamanho do tile (px) / Tile size (px)", 512, 4096, 1536, step=128)
+            overlap = st.number_input("Sobreposicao (px) / Overlap (px)", 0, 1024, 256, step=64)
+            max_tiles = st.number_input("Limite de tiles / Max tiles", 10, 500, 120, step=10)
+        with col2:
+            img_size = st.number_input("Tamanho de inferencia (px) / Inference size (px)", 320, 2048, 1536, step=64)
+            conf_thres = st.slider("Confianca minima / Min confidence", 0.05, 0.70, 0.25, 0.01)
+
+            default_weights_url = get_default_weights_url(algorithm) or ""
+            weights_url = st.text_input(
+                "URL opcional dos pesos / Optional weights URL",
+                value=default_weights_url,
+                key=f"weights_url_{normalize_algorithm_name(algorithm)}",
+                help=(
+                    "Se vazio, usa automaticamente a URL padrao do algoritmo. "
+                    "If empty, the algorithm default weights URL is used automatically when available."
+                ),
             )
 
-        with st.expander("Ajustes avancados / Advanced settings", expanded=False):
-            col1, col2 = st.columns(2)
-            with col1:
-                tile_size = st.number_input("Tamanho do tile (px) / Tile size (px)", 512, 4096, 1536, step=128)
-                overlap = st.number_input("Sobreposicao (px) / Overlap (px)", 0, 1024, 256, step=64)
-                max_tiles = st.number_input("Limite de tiles / Max tiles", 10, 500, 120, step=10)
-            with col2:
-                img_size = st.number_input("Tamanho de inferencia (px) / Inference size (px)", 320, 2048, 1536, step=64)
-                conf_thres = st.slider("Confianca minima / Min confidence", 0.05, 0.70, 0.25, 0.01)
-
-                default_weights_url = get_default_weights_url(algorithm) or ""
-                weights_url = st.text_input(
-                    "URL opcional dos pesos / Optional weights URL",
-                    value=default_weights_url,
-                    key=f"weights_url_{normalize_algorithm_name(algorithm)}",
-                    help=(
-                        "Se vazio, usa automaticamente a URL padrao do algoritmo. "
-                        "If empty, the algorithm default weights URL is used automatically when available."
-                    ),
+            if not default_weights_url:
+                st.info(
+                    "Este algoritmo nao possui URL padrao de pesos. "
+                    "Informe manualmente uma URL de .pt ou deixe um arquivo local pronto em workdir/weights/."
                 )
 
-                if not default_weights_url:
-                    st.info(
-                        "Este algoritmo nao possui URL padrao de pesos. "
-                        "Informe manualmente uma URL de .pt ou deixe um arquivo local pronto em workdir/weights/."
-                    )
-
-        btn_left, btn_center, btn_right = st.columns([1, 2, 1])
-        with btn_center:
-            submitted = st.form_submit_button("Executar deteccao / Run detection", use_container_width=True)
+    btn_left, btn_center, btn_right = st.columns([1, 2, 1])
+    with btn_center:
+        submitted = st.button(
+            "Executar deteccao / Run detection",
+            use_container_width=True,
+            type="primary",
+        )
 
     if submitted:
         if overlap >= tile_size:
