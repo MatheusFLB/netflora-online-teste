@@ -4,16 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Netflora Online | Apresentacao</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <div class="page">
       <header class="hero">
         <span class="eyebrow">Netflora Online</span>
-        <h1>Deteccao inteligente de especies em ortofotos</h1>
+        <h1>Deteccao de Especies Vegetais com IA</h1>
         <p>
-          Uma apresentacao objetiva do projeto e da demo tecnica para inventario
-          florestal com apoio de inteligencia artificial.
+          <strong>Projeto desenvolvido pela Embrapa</strong> para o inventario florestal automatizado com uso
+          de drones e inteligencia artificial. A ferramenta analisa ortofotos aereas e identifica
+          automaticamente a localizacao de especies vegetais de interesse, como Acai, Castanheira,
+          Palmeiras e outras especies da floresta amazonica.
         </p>
         <div class="cta-row">
           <a class="button" href="https://netflora-online-teste.streamlit.app" target="_blank" rel="noreferrer">
@@ -25,55 +28,57 @@
           O Streamlit pode levar alguns minutos para carregar e executar a analise da ortofoto.
         </p>
       </header>
-
+      
       <section class="section card">
-        <h2>Proposta</h2>
+        <h2>Base tecnica do projeto</h2>
         <p>
-          Automatizar a identificacao de especies vegetais em ortofotos de alta resolucao,
-          gerando mapas e tabelas para apoiar inventarios florestais e tomada de decisao.
+          Para viabilizar esta solucao, a Embrapa estruturou o projeto com base em Python e
+          no modelo de deteccao de objetos YOLO (You Only Look Once), amplamente utilizado
+          em visao computacional para identificacao automatica de elementos em imagens.
+          A proposta original foi desenvolvida para execucao em ambiente de nuvem,
+          por meio do Google Colab/Notebook, permitindo o processamento de ortofotos
+          aereas com apoio de inteligencia artificial sem exigir infraestrutura local robusta.
+        </p>
+        <p>
+          A partir dessa base, o codigo foi adaptado para execucao local, ampliando a
+          flexibilidade de uso e possibilitando maior controle sobre os dados. Alem disso,
+          foi implementada esta pagina de acesso publico, onde qualquer pessoa pode enviar
+          uma ortofoto e receber o resultado da analise de forma pratica e acessivel.
+        </p>
+        <p>
+          Apos o processamento, a pagina disponibiliza os arquivos gerados para exportacao,
+          incluindo especialmente o Shapefile, formato amplamente utilizado em sistemas de
+          informacao geografica (GIS). Isso permite que os resultados sejam integrados a
+          ferramentas de analise topografica, mapeamento e planejamento territorial,
+          facilitando o aproveitamento tecnico das informacoes obtidas.
         </p>
       </section>
 
-      <section class="section grid">
-        <div class="card-item">
-          <h3>Contexto do problema</h3>
-          <p>
-            Processos manuais de contagem e classificacao em grandes areas sao lentos,
-            custosos e sujeitos a variacoes operacionais.
-          </p>
-        </div>
-        <div class="card-item">
-          <h3>Solucao resumida</h3>
-          <p>
-            Um pipeline de tiles, deteccao por YOLO e georreferenciamento para gerar
-            resultados estruturados e visualizacao em mapa.
-          </p>
-        </div>
-        <div class="card-item">
-          <h3>Saidas principais</h3>
-          <p>
-            CSV de deteccoes, mapa interativo e opcionalmente shapefile para uso em GIS.
-          </p>
-        </div>
-      </section>
-
       <section class="section card">
-        <h2>Destaques tecnicos</h2>
-        <ul class="list">
-          <li>Deteccao baseada em YOLO com modelos treinados para especies alvo.</li>
-          <li>Recorte da ortofoto em tiles com sobreposicao controlada.</li>
-          <li>Conversao de coordenadas para gerar poligonos em WGS84.</li>
-          <li>Mapa interativo com overlay da ortofoto e marcadores de deteccao.</li>
-          <li>Exportacao simplificada para CSV e pacote de resultados.</li>
-        </ul>
-      </section>
-
-      <section class="section card">
-        <h2>IA, visao computacional e geoprocessamento</h2>
-        <p>
-          O fluxo combina processamento de imagem, inferencia por redes neurais e
-          transformacoes espaciais para entregar indicadores e mapas prontos para analise.
-        </p>
+        <h2>Como funciona?</h2>
+        <p class="flow-intro">Da imagem bruta ao mapa final, o processo ocorre em quatro etapas objetivas.</p>
+        <div class="process-flow" aria-label="Fluxo de processamento">
+          <article class="flow-step">
+            <span class="flow-index">01</span>
+            <h3>Ortofoto</h3>
+            <p>Imagem aerea georreferenciada (.tif) capturada por drone.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">02</span>
+            <h3>Tiles</h3>
+            <p>A imagem e dividida em recortes para facilitar a analise pelo modelo.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">03</span>
+            <h3>Deteccao</h3>
+            <p>Um modelo de deep learning identifica as especies em cada recorte.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">04</span>
+            <h3>Resultado</h3>
+            <p>As deteccoes sao georreferenciadas e exibidas em um mapa interativo.</p>
+          </article>
+        </div>
       </section>
 
       <section class="section card">
@@ -87,26 +92,55 @@
 
       <section class="section card">
         <h2>Executar localmente</h2>
+        <p>
+          Fluxo local em Python (comandos validados), baseado na adaptacao do projeto
+          original para execucao fora do Google Colab.
+        </p>
         <div class="code-block">
-<pre><code>git clone https://github.com/MatheusFLB/netflora-online-teste.git
-cd netflora-online-teste
+<pre><code>preparar ambiente python
 python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-streamlit run app.py</code></pre>
+
+entrar na pasta do fluxo local adaptado
+cd workdir\netflora_src
+
+gerar o tiles, imagens cortadas para facilitar a analise
+python -c "from tiles import TileGenerator; TileGenerator()"
+
+detectar plantas nos tiles
+python detect.py --device 0 --weights model_weights.pt --img 1536
+
+threshold de confianca de deteccao
+python -c "from utils.batch_detection import runBatchDetection; runBatchDetection(device='cpu', img_size=1536, source_path='processing/selected_images', weights_path='model_weights.pt', save_txt=True)"
+python -c "from utils.thresh_display import ImageDisplayer; ImageDisplayer()"
+
+processar resultados
+python results.py --graphics --conf 0.25
+
+exibir imagem de resumo (no terminal pode nao renderizar; o arquivo fica salvo em results)
+python -c "from results import showResults; showResults()"
+
+criar mapa e salvar em HTML
+python -c "from utils.map_utils import createMap; m=createMap(); m.save('results/mapa.html')"
+
+abrir o mapa no navegador (Windows)
+start results\mapa.html
+
+gerar zip dos resultados
+python -c "from results import downloadResults; downloadResults()"</code></pre>
         </div>
       </section>
 
-      <section class="section card">
-        <h2>Repositorio</h2>
-        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
-          github.com/MatheusFLB/netflora-online-teste
-        </a>
-      </section>
-
       <footer class="footer">
-        <span>Contato: https://www.embrapa.br/acre/</span>
         <a class="link" href="https://www.embrapa.br/acre/netflora" target="_blank" rel="noreferrer">
-          Site oficial do projeto
+          Netflora - Embrapa
+        </a>
+        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
+          Código-fonte
+        </a>
+        <a class="link" href="https://matheusflb.github.io/" target="_blank" rel="noreferrer">
+          Matheus Bissoli
         </a>
       </footer>
     </div>

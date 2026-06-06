@@ -57,7 +57,7 @@ body::after {
 
 .eyebrow {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: 3rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
@@ -175,6 +175,73 @@ p {
   background: rgba(29, 108, 78, 0.08);
 }
 
+.flow-intro {
+  max-width: 760px;
+  margin: 0 auto 18px;
+  font-size: 0.98rem;
+}
+
+.process-flow {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  text-align: left;
+  margin-top: 6px;
+}
+
+.process-flow::before {
+  content: "";
+  position: absolute;
+  left: 26px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(29, 108, 78, 0.25), rgba(195, 107, 61, 0.35));
+}
+
+.flow-step {
+  position: relative;
+  padding: 16px 16px 16px 74px;
+  border-radius: 16px;
+  border: 1px solid rgba(29, 108, 78, 0.22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(241, 247, 242, 0.92));
+  box-shadow: 0 12px 24px rgba(21, 31, 27, 0.08);
+  animation: floatIn 0.7s ease-out;
+}
+
+.flow-step::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 24px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 0 5px rgba(29, 108, 78, 0.14);
+}
+
+.flow-index {
+  position: absolute;
+  left: 44px;
+  top: 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.flow-step h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.flow-step p {
+  margin: 6px 0 0;
+  font-size: 0.96rem;
+}
+
 .image-grid {
   display: grid;
   gap: 14px;
@@ -256,6 +323,25 @@ p {
 @media (max-width: 720px) {
   .page {
     padding: 48px 18px 32px;
+  }
+
+  .process-flow::before {
+    left: 18px;
+  }
+
+  .flow-step {
+    padding: 14px 14px 14px 56px;
+  }
+
+  .flow-step::before {
+    left: 9px;
+    top: 22px;
+  }
+
+  .flow-index {
+    left: 31px;
+    top: 15px;
+    font-size: 0.7rem;
   }
 
   .footer {

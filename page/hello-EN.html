@@ -4,16 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Netflora Online | Overview</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <div class="page">
       <header class="hero">
         <span class="eyebrow">Netflora Online</span>
-        <h1>Smart species detection on orthophotos</h1>
+        <h1>Plant Species Detection with AI</h1>
         <p>
-          A concise overview of the project and the technical demo for forest inventory
-          with artificial intelligence support.
+          <strong>Project developed by Embrapa</strong> for automated forest inventory using drones and
+          artificial intelligence. The tool analyzes aerial orthophotos and automatically
+          identifies the location of plant species of interest, such as Acai, Brazil Nut,
+          Palms, and other Amazon rainforest species.
         </p>
         <div class="cta-row">
           <a class="button" href="https://netflora-online-teste.streamlit.app" target="_blank" rel="noreferrer">
@@ -25,57 +28,57 @@
           The Streamlit demo may take a few minutes to load and process the orthophoto.
         </p>
       </header>
-
+      
       <section class="section card">
-        <h2>Project goal</h2>
+        <h2>Technical foundation</h2>
         <p>
-          Automate the identification of vegetation species on high-resolution orthophotos,
-          producing maps and tables to support forest inventories and decision making.
+          To enable this solution, Embrapa structured the project using Python and the YOLO
+          (You Only Look Once) object detection model, widely used in computer vision for
+          automatic element identification in images. The original proposal was developed for
+          cloud execution via Google Colab/Notebook, allowing orthophoto processing with AI
+          support without requiring robust local infrastructure.
+        </p>
+        <p>
+          From this base, the code was adapted for local execution, expanding flexibility and
+          enabling greater data control. Additionally, this public-access page was implemented,
+          where anyone can upload an orthophoto and receive the analysis results in a practical
+          and accessible way.
+        </p>
+        <p>
+          After processing, the page provides the generated files for export, especially the
+          Shapefile format widely used in geographic information systems (GIS). This allows
+          results to be integrated into topographic analysis, mapping and territorial planning
+          tools, facilitating the technical use of the information obtained.
         </p>
       </section>
 
-      <section class="section grid">
-        <div class="card-item">
-          <h3>Problem context</h3>
-          <p>
-            Manual counting and classification across large areas is slow, expensive,
-            and subject to operational inconsistencies.
-          </p>
-        </div>
-        <div class="card-item">
-          <h3>Condensed solution</h3>
-          <p>
-            A tiling pipeline with YOLO-based detection and georeferencing to deliver
-            structured results and map visualization.
-          </p>
-        </div>
-        <div class="card-item">
-          <h3>Main outputs</h3>
-          <p>
-            Detection CSV, interactive map, and optional shapefile for GIS workflows.
-          </p>
-        </div>
-      </section>
-
       <section class="section card">
-        <h2>Technical highlights</h2>
-        <ul class="list">
-          <li>YOLO detection models tailored for target species.</li>
-          <li>Orthophoto tiling with controlled overlap.</li>
-          <li>Coordinate conversion to build WGS84 polygons.</li>
-          <li>Interactive map with orthophoto overlay and detections.</li>
-          <li>Simple export to CSV and result package.</li>
-        </ul>
+        <h2>How does it work?</h2>
+        <p class="flow-intro">From raw imagery to the final map, the workflow runs in four focused stages.</p>
+        <div class="process-flow" aria-label="Processing workflow">
+          <article class="flow-step">
+            <span class="flow-index">01</span>
+            <h3>Orthophoto</h3>
+            <p>Georeferenced aerial image (.tif) captured by drone.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">02</span>
+            <h3>Tiles</h3>
+            <p>The image is split into crops to facilitate model analysis.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">03</span>
+            <h3>Detection</h3>
+            <p>A deep learning model identifies species in each crop.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-index">04</span>
+            <h3>Result</h3>
+            <p>Detections are georeferenced and displayed on an interactive map.</p>
+          </article>
+        </div>
       </section>
-
-      <section class="section card">
-        <h2>AI, computer vision, and geoprocessing</h2>
-        <p>
-          The flow combines image processing, neural inference, and spatial transforms
-          to deliver indicators and maps ready for analysis.
-        </p>
-      </section>
-
+      
       <section class="section card">
         <h2>Images and screenshots</h2>
         <div class="image-grid">
@@ -87,26 +90,55 @@
 
       <section class="section card">
         <h2>Run locally</h2>
+        <p>
+          Local Python workflow (validated commands), adapted from the original
+          Google Colab-oriented project to local execution.
+        </p>
         <div class="code-block">
-<pre><code>git clone https://github.com/MatheusFLB/netflora-online-teste.git
-cd netflora-online-teste
+<pre><code>prepare python environment
 python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-streamlit run app.py</code></pre>
+
+enter the adapted local workflow folder
+cd workdir\netflora_src
+
+generate tiles (cropped images for easier analysis)
+python -c "from tiles import TileGenerator; TileGenerator()"
+
+detect plants on tiles
+python detect.py --device 0 --weights model_weights.pt --img 1536
+
+detection confidence threshold workflow
+python -c "from utils.batch_detection import runBatchDetection; runBatchDetection(device='cpu', img_size=1536, source_path='processing/selected_images', weights_path='model_weights.pt', save_txt=True)"
+python -c "from utils.thresh_display import ImageDisplayer; ImageDisplayer()"
+
+process results
+python results.py --graphics --conf 0.25
+
+show summary image (terminal may not render; output file is saved in results)
+python -c "from results import showResults; showResults()"
+
+create map and save as HTML
+python -c "from utils.map_utils import createMap; m=createMap(); m.save('results/mapa.html')"
+
+open map in browser (Windows)
+start results\mapa.html
+
+generate results zip
+python -c "from results import downloadResults; downloadResults()"</code></pre>
         </div>
       </section>
 
-      <section class="section card">
-        <h2>Repository</h2>
-        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
-          github.com/MatheusFLB/netflora-online-teste
-        </a>
-      </section>
-
       <footer class="footer">
-        <span>Contact: https://www.embrapa.br/acre/</span>
         <a class="link" href="https://www.embrapa.br/acre/netflora" target="_blank" rel="noreferrer">
-          Official project site
+          Netflora - Embrapa
+        </a>
+        <a class="link" href="https://github.com/MatheusFLB/netflora-online-teste" target="_blank" rel="noreferrer">
+          Source code
+        </a>
+        <a class="link" href="https://matheusflb.github.io/" target="_blank" rel="noreferrer">
+          Matheus Bissoli
         </a>
       </footer>
     </div>
